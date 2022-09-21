@@ -22,8 +22,15 @@ char variavelHex[100];
 char resultadoInversao[100];
 char resultadoCopia[100];
 
+char e_shoffHexa[100];
+int e_shoff;
 
+char e_shstrndxHexa[100];
 int e_shstrndx;
+
+int e_shnum;
+
+
 //TODO
 /* 
 
@@ -112,7 +119,6 @@ int EncontraOffset(char *offsetHexa){//dado um offset a partir do inicio do arqu
 
 }
 
-
 void InverteString(char *string){
 
     int tamanho = 0;
@@ -127,15 +133,73 @@ void InverteString(char *string){
 
 
 }
+
+void CopiaStringSemEspacos(char * str, int inicio, int fim){//de str[inicio] a str[fim - 1]
+
+    int j = 0;
+    for(int i = inicio; i < fim; i++){
+
+        if(str[i] != ' '){
+
+            resultadoCopia[j] = str[i];
+            printf("%c\n", resultadoCopia[j]);
+            j += 1;
+
+        }
+
+    }
+
+    resultadoCopia[j] = '\0';
+
+}
+
+void InverteEndian(char *hexa){//hexa tem que ter numero par de caracteres
+
+    int tamanho = 0;
+
+    while(hexa[tamanho] != '\0') tamanho += 1;
+
+    int i = 0; 
+    while(i < tamanho){
+         
+        resultadoInversao[i] = hexa[tamanho - i - 2];
+        resultadoInversao[i + 1] = hexa[tamanho - i - 1];
+        i += 2;
+
+    }
+
+    resultadoInversao[i] = '\0';
+
+
+}
+
+int EncontraOffsetCasca(char * elf, int inicio, int tamanho){
+
+    e_shoffHexa = CopiaStringSemEspacos(elf, inicio, inicio + tamanho);
+
+    InverteEndian(resultadoCopia);
+
+    int resultado = EncontraOffset(resultadoInversao);
+
+    return resultado;
+}
 //=============================================================================
 
 void ProcuraPalavrasIguais(){
 
 }
 
-void EncontraPosicaoHeader(char * tipo){
+void EncontraPosicaoHeader(char * tipo, char * elf){
 
-    e_shstrndx = 
+    e_shoff = EncontraOffsetCasca(elf, POSICAO_ESHOFF, 12);
+
+    CopiaStringSemEspacos(elf, POSICAO_ESHSTRNDX, POSICAO_ESHSTRNDX + 5);
+    InverteEndian(resultadoCopia);
+    e_shstrndx = HexDec(resultadoInversao);
+
+
+    
+
 
 }
  
