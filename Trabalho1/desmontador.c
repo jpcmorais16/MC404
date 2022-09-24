@@ -1,238 +1,75 @@
-#define TAMANHO_LINHA 79 //contando \n
-#define TAMANHO_FINAL 18
-#define TAMANHO_LINHA_NUMEROS_ESPACOS 48
-#define TAMANHO_LINHA_SO_HEXAS 16
-
-// contando quebras de linha
-#define TAMANHO_MARCADOR_LINHA 8
-#define POSICAO_ESHOFF 168
-#define POSICAO_ESHNUM 247
-#define POSICAO_ESHSTRNDX 253
-#define TAMANHO_ENTRE_DUAS_LINHAS 31
-//==================================
-
-int posicaoHeader;
-int tamanhoHeader;
-int posicaoSection;
-int tamanhoSection;
-char elf[10000];
-char entrada[100];
-char saida[1000];
-char variavelHex[100];
-char resultadoInversao[100];
-char resultadoCopia[100];
-
-char e_shoffHexa[100];
-int e_shoff;
-
-char e_shstrndxHexa[100];
-int e_shstrndx;
-
-int e_shnum;
-
-
-//TODO
-/* 
-
-
-    VER COMO O LEITOR DE ARQUIVOS FUNCIONA 
-    IMPLEMENTAR UM COPIADOR DE STRINGS
-    IMPLEMENTAR INVERSOR DE ENDIANESS
-
-
-
- */
-//=============== TESTADAS ====================
-unsigned long int pot(int num, int pot) {
-
-    unsigned long int resultado = 1;
-    for (int i = 0; i < pot; i++) {
-        resultado *= num;
-
-    }
-    return resultado;
-}
-
-int HexDec(char * entrada) {
-
-    int it = 0;
-    int tamanho = 0;
-
-    //long long int resultado=0;
-    unsigned long int resultado = 0;
-
-
-    while(entrada[tamanho] != '\0') tamanho += 1;
-
-
-    for(int it=0; it < tamanho; it++){
-
-
-        switch (entrada[it]) {
-
-        case 'a':
-            resultado += 10 * pot(16, tamanho - it - 1) ;
-            break;
-        case 'b':
-            resultado += 11 * pot(16, tamanho - 1 - it) ;
-            break;
-        case 'c':
-            resultado += 12 * pot(16, tamanho - 1 - it) ;
-            break;
-        case 'd':
-            resultado += 13 * pot(16, tamanho - 1 - it) ;
-            break;
-        case 'e':
-            resultado += 14 * pot(16, tamanho - 1 - it) ;
-            break;
-        case 'f':
-            resultado += 15 * pot(16, tamanho - 1 - it);
-            break;
-        default:
-            resultado += (entrada[it] - 48) * pot(16, tamanho - 1 - it) ;
-            break;
-        }
-
-
-    }
-
-    return resultado;
-}
-
-//ENCONTRA A POSICAO EXATA DO PRIMEIRO CARACTERE
-int EncontraOffset(char *offsetHexa){//dado um offset a partir do inicio do arquivo
-
-    int resultado = 10;
-    unsigned long offsetDecimal = HexDec(offsetHexa);
-    int trocasDeLinha = offsetDecimal / TAMANHO_LINHA_SO_HEXAS;
-
-    if(trocasDeLinha > 1) resultado += TAMANHO_LINHA_NUMEROS_ESPACOS;
-
-    resultado += (trocasDeLinha - 1) * TAMANHO_LINHA;
-    resultado += TAMANHO_ENTRE_DUAS_LINHAS;
-
-    if(offsetDecimal % 16 >= 8) resultado += 1;
-
-    resultado += (offsetDecimal % 16) * 3;
-
-    return resultado;
-
-}
-
-void InverteString(char *string){
-
-    int tamanho = 0;
-    while(string[tamanho] != '\0') tamanho += 1;
-
-    for(int i=0; i < tamanho; i++){
-        resultadoInversao[i] = string[tamanho - i - 1];
-
-    }
-
-    resultadoInversao[tamanho] = '\0';
-
-
-}
-
-void CopiaStringSemEspacos(char * str, int inicio, int fim){//de str[inicio] a str[fim - 1]
-
-    int j = 0;
-    for(int i = inicio; i < fim; i++){
-
-        if(str[i] != ' '){
-
-            resultadoCopia[j] = str[i];
-            printf("%c\n", resultadoCopia[j]);
-            j += 1;
-
-        }
-
-    }
-
-    resultadoCopia[j] = '\0';
-
-}
-
-void InverteEndian(char *hexa){//hexa tem que ter numero par de caracteres
-
-    int tamanho = 0;
-
-    while(hexa[tamanho] != '\0') tamanho += 1;
-
-    int i = 0; 
-    while(i < tamanho){
-         
-        resultadoInversao[i] = hexa[tamanho - i - 2];
-        resultadoInversao[i + 1] = hexa[tamanho - i - 1];
-        i += 2;
-
-    }
-
-    resultadoInversao[i] = '\0';
-
-
-}
-
-int EncontraOffsetCasca(char * elf, int inicio, int tamanho){
-
-    e_shoffHexa = CopiaStringSemEspacos(elf, inicio, inicio + tamanho);
-
-    InverteEndian(resultadoCopia);
-
-    int resultado = EncontraOffset(resultadoInversao);
-
-    return resultado;
-}
-//=============================================================================
-
-void ProcuraPalavrasIguais(){
-
-}
-
-void EncontraPosicaoHeader(char * tipo, char * elf){
-
-    e_shoff = EncontraOffsetCasca(elf, POSICAO_ESHOFF, 12);
-
-    CopiaStringSemEspacos(elf, POSICAO_ESHSTRNDX, POSICAO_ESHSTRNDX + 5);
-    InverteEndian(resultadoCopia);
-    e_shstrndx = HexDec(resultadoInversao);
-
-
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+
+typedef struct
+{
+    unsigned char e_ident[16];  // Magic number and other info
+    unsigned short e_type;      // Object file type
+    unsigned short e_machine;   // Architecture
+    unsigned int e_version;     // Object file version
+    unsigned int e_entry;       // Entry point virtual address
+    unsigned int e_phoff;       // Program header table file offset
+    unsigned int e_shoff;       // Section header table file offset
+    unsigned int e_flags;       // Processor-specific flags
+    unsigned short e_ehsize;    // ELF header size in bytes
+    unsigned short e_phentsize; // Program header table entry size
+    unsigned short e_phnum;     // Program header table entry count
+    unsigned short e_shentsize; // Section header table entry size
+    unsigned short e_shnum;     // Section header table entry count
+    unsigned short e_shstrndx;  // Section header string table index
+} Elf32_Ehdr;
+
+typedef struct
+{
+    unsigned int sh_name;      // Section name (string tbl index)
+    unsigned int sh_type;      // Section type
+    unsigned int sh_flags;     // Section flags
+    unsigned int sh_addr;      // Section virtual addr at execution
+    unsigned int sh_offset;    // Section file offset
+    unsigned int sh_size;      // Section size in bytes
+    unsigned int sh_link;      // Link to another section
+    unsigned int sh_info;      // Additional section information
+    unsigned int sh_addralign; // Section alignment
+    unsigned int sh_entsize;   // Entry size if section holds table
+} Elf32_Shdr;
+
+typedef struct
+{
+    unsigned int st_name;  // Symbol name (string tbl index)
+    unsigned int st_value; // Symbol value
+    unsigned int st_size;  // Symbol size
+    unsigned char st_info; // Symbol type and binding
+    unsigned char st_other;
+    unsigned short st_shndx; // Section index
+} Elf32_Sym;
+
+
+int main( int argc, char *argv[ ]){
+
+   
+
+    unsigned char elf[100000];
+
+    int fd = open( argv[2] , O_RDONLY);
+    Elf32_Ehdr *header;
+
+    read(fd, elf, 100000);
+    header = (Elf32_Ehdr *) &elf;
+
+    //printf("%s\n", (char*) &header->e_shoff);
+    printf("%ld\n", header->e_shoff);
+
+    int PosicaoHeaderShstrtab = header->e_shstrndx * 40 + header->e_shoff;
+    //printf("%d\n", HeaderShstrtab);
+
+    Elf32_Shdr *HeaderShstrtab = (Elf32_Shdr *) &(*(elf + PosicaoHeaderShstrtab));
+
+    printf("%d\n", HeaderShstrtab->sh_offset);
+
+    //printf("%d\n", header->e_entry);
     
-
-
-}
- 
-void EncontraHeader(){
-
-
-
-
-
-
-
-
-
 }
 
 
 
-int main(){
-
-    entrada = LeEntrada();
-    LeArquivo();//vai traduzir a opcao de entrada para o nome da section que se procura
-
-    //identificar qual o tipo de desmontagem
-    char tipo;
-    
-
-    EncontraPosicaoHeader(tipo);
-    EncontraHeader();
-    EncontraSection();
-    DesmontaSection(tipo);
-
-    ImprimeSaida(saida);
-
-
-
-}
