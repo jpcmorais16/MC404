@@ -44,12 +44,43 @@ typedef struct
     unsigned short st_shndx; // Section index
 } Elf32_Sym;
 
+void ImprimeHeader(unsigned char * elf, Elf32_Shdr *Header){
+
+    for(int i=0; i < Header->sh_size; i++){
+
+        printf("%c\n", elf[Header->sh_offset + i]);
+
+    }
+
+
+
+
+}
+
+int StringsIguais(char *str1, unsigned char *str2){
+
+    int tamanho = 0;
+
+    while(str1[tamanho] != '\0') tamanho += 1;
+
+    for(int i = 0; i < tamanho; i++){
+
+        if(str1[i] != str2[i]) return 0;
+        printf("%c\n", str1[i]);
+    }
+    return 1;
+
+
+}
+
 
 int main( int argc, char *argv[ ]){
 
    
+    
 
-    unsigned char elf[100000];
+
+    unsigned char elf[1000000];
 
     int fd = open( argv[2] , O_RDONLY);
     Elf32_Ehdr *header;
@@ -65,7 +96,63 @@ int main( int argc, char *argv[ ]){
 
     Elf32_Shdr *HeaderShstrtab = (Elf32_Shdr *) &(*(elf + PosicaoHeaderShstrtab));
 
-    printf("%d\n", HeaderShstrtab->sh_offset);
+   
+
+
+    if(argv[1][1] == 't'){
+        printf("entrou\n");
+        Elf32_Shdr *SymtabHeader = NULL;
+        Elf32_Shdr *StrtabHeader = NULL;
+        
+       for(int i = 0; i < header->e_shnum; i++){
+
+            Elf32_Shdr *HeaderAtual = (Elf32_Shdr *) &(*(elf + header->e_shoff + 40*i));
+            
+            //printf("kkkk%c\n", elf[HeaderShstrtab->sh_offset + HeaderAtual->sh_name + 1]);
+            //printf("olha%d\n", HeaderShstrtab->sh_offset + HeaderAtual->sh_name);
+
+            
+            if(StringsIguais("symtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
+
+                printf("deu certo pai\n");
+                SymtabHeader = HeaderAtual;
+                
+
+            }
+
+            if(StringsIguais("strtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
+
+                printf("deu certo pai\n");
+                StrtabHeader = HeaderAtual;
+                
+
+            }
+
+
+
+       }
+       int x = SymtabHeader->sh_offset;
+       printf("%d\n", x);
+       printf("%d\n", SymtabHeader->sh_size);
+
+       Elf32_Sym * symbol1 = (Elf32_Sym *) (elf + SymtabHeader->sh_offset);
+       printf("aqui mano%d\n", symbol1->st_name);
+        
+        Elf32_Sym *SymbolsList[100];
+       
+        for(int i=0; i < SymtabHeader->sh_size; i++){
+
+            SymbolsList[i] = (Elf32_Sym *) (elf + SymtabHeader->sh_offset + i * 16);
+
+
+        }
+       
+        ImprimeHeader(elf, StrtabHeader);
+       //printf("ai %s\n", (elf+SymtabHeader->sh_offset));     
+
+
+
+    }
 
     //printf("%d\n", header->e_entry);
     
