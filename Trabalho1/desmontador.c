@@ -2,6 +2,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
+char ResultadoConversao[100];
+char ResultadoIntStr[100];
+
 typedef struct
 {
     unsigned char e_ident[16];  // Magic number and other info
@@ -44,6 +47,16 @@ typedef struct
     unsigned short st_shndx; // Section index
 } Elf32_Sym;
 
+
+int TamanhoString(char *str){
+
+    int tamanho = 0;
+    while(str[tamanho] != '\0') tamanho += 1;
+
+    return tamanho;
+
+}
+
 void ImprimeHeader(unsigned char * elf, Elf32_Shdr *Header){
 
     for(int i=0; i < Header->sh_size; i++){
@@ -51,9 +64,74 @@ void ImprimeHeader(unsigned char * elf, Elf32_Shdr *Header){
         printf("%c\n", elf[Header->sh_offset + i]);
 
     }
+}
 
+void InverteString(char *str){
 
+    int tamanho = 0;
+    while(str[tamanho] != '\0') tamanho += 1;
 
+    for(int i=0 ; i < tamanho; i++){
+
+        ResultadoConversao[i] = str[tamanho - i - 1];
+        
+    }
+
+    ResultadoConversao[tamanho] = '\0';
+
+}
+
+void DecHex(int entrada) {
+
+  int it = 0;
+  int dividendo = entrada;
+  char resultado[100];
+
+  while (dividendo != 0) {
+
+    int resto = dividendo % 16;
+
+    if (resto > 9) {
+      switch (resto) {
+
+      case (10):
+        resultado[it] = 'a';
+        break;
+      case (11):
+        resultado[it] = 'b';
+        break;
+      case (12):
+        resultado[it] = 'c';
+        break;
+      case (13):
+        resultado[it] = 'd';
+        break;
+      case (14):
+        resultado[it] = 'e';
+        break;
+      case (15):
+        resultado[it] = 'f';
+        break;
+      default:
+        break;
+      }
+
+    } else {
+
+      resultado[it] = resto + 48;
+    }
+
+    dividendo = dividendo / 16;
+    it += 1;
+  }
+
+    while(it < 8){
+        resultado[it] = '0';
+        it += 1;
+    }
+
+  resultado[it] = '\0';
+  InverteString(resultado);
 
 }
 
@@ -66,7 +144,7 @@ int StringsIguais(char *str1, unsigned char *str2){
     for(int i = 0; i < tamanho; i++){
 
         if(str1[i] != str2[i]) return 0;
-        printf("%c\n", str1[i]);
+ 
     }
     return 1;
 
@@ -88,73 +166,139 @@ int main( int argc, char *argv[ ]){
     read(fd, elf, 100000);
     header = (Elf32_Ehdr *) &elf;
 
-    //printf("%s\n", (char*) &header->e_shoff);
-    printf("%ld\n", header->e_shoff);
-
     int PosicaoHeaderShstrtab = header->e_shstrndx * 40 + header->e_shoff;
-    //printf("%d\n", HeaderShstrtab);
+
 
     Elf32_Shdr *HeaderShstrtab = (Elf32_Shdr *) &(*(elf + PosicaoHeaderShstrtab));
 
-   
+    Elf32_Shdr *SymtabHeader = NULL;
+    Elf32_Shdr *StrtabHeader = NULL;
+    
+    for(int i = 0; i < header->e_shnum; i++){
 
+        Elf32_Shdr *HeaderAtual = (Elf32_Shdr *) &(*(elf + header->e_shoff + 40*i));
+        
+        
+
+        
+        if(StringsIguais("symtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
+
+            SymtabHeader = HeaderAtual;
+            
+
+        }
+
+        if(StringsIguais("strtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
+
+            StrtabHeader = HeaderAtual;
+            
+
+        }
+
+    }
+
+    write(1, "\n", 1);
+    write(1, "test-01.x:	file format elf32-littleriscv", 40);
+    write(1, "\n\n", 2);
 
     if(argv[1][1] == 't'){
-        printf("entrou\n");
-        Elf32_Shdr *SymtabHeader = NULL;
-        Elf32_Shdr *StrtabHeader = NULL;
+
         
-       for(int i = 0; i < header->e_shnum; i++){
 
-            Elf32_Shdr *HeaderAtual = (Elf32_Shdr *) &(*(elf + header->e_shoff + 40*i));
-            
-            //printf("kkkk%c\n", elf[HeaderShstrtab->sh_offset + HeaderAtual->sh_name + 1]);
-            //printf("olha%d\n", HeaderShstrtab->sh_offset + HeaderAtual->sh_name);
-
-            
-            if(StringsIguais("symtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
-
-                printf("deu certo pai\n");
-                SymtabHeader = HeaderAtual;
-                
-
-            }
-
-            if(StringsIguais("strtab", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
-
-                printf("deu certo pai\n");
-                StrtabHeader = HeaderAtual;
-                
-
-            }
-
-
-
-       }
        int x = SymtabHeader->sh_offset;
-       printf("%d\n", x);
-       printf("%d\n", SymtabHeader->sh_size);
+       //printf("%d\n", x);
+       //printf("%d\n", SymtabHeader->sh_size);
 
        Elf32_Sym * symbol1 = (Elf32_Sym *) (elf + SymtabHeader->sh_offset);
-       printf("aqui mano%d\n", symbol1->st_name);
+
         
         Elf32_Sym *SymbolsList[100];
        
-        for(int i=0; i < SymtabHeader->sh_size; i++){
+        for(int i=0; i < SymtabHeader->sh_size; i += 16){
 
-            SymbolsList[i] = (Elf32_Sym *) (elf + SymtabHeader->sh_offset + i * 16);
+            SymbolsList[i/16] = (Elf32_Sym *) (elf + SymtabHeader->sh_offset + i);
 
+        }
+    
+        //printf("\n");
+        //printf("test-01.x:	file format elf32-littleriscv\n");
+
+        
+
+        for(int i = 1; i < SymtabHeader->sh_size/16; i++){
+
+
+            DecHex(SymbolsList[i]->st_value);
+
+            char coluna2[1];
+            coluna2[0] = 'l';
+            if(SymbolsList[i]->st_info >> 4 == 1) coluna2[0] = 'g';
+
+            
+           
+            
+            write(1, ResultadoConversao, TamanhoString(ResultadoConversao));
+            write(1, " ", 1);
+
+            write(1, coluna2, 1);
+            write(1, " ", 1);
+
+            write(1, (elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset), TamanhoString((elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset)));
+            write(1, " ", 1);
+
+            DecHex(SymbolsList[i]->st_size);
+            write(1, ResultadoConversao, TamanhoString(ResultadoConversao));
+            write(1, " ", 1);
+
+            write(1, (elf + SymbolsList[i]->st_name + StrtabHeader->sh_offset), TamanhoString((elf + SymbolsList[i]->st_name + StrtabHeader->sh_offset)));
+            write(1, "\n", 1);
+
+           
+          
+            
 
         }
        
-        ImprimeHeader(elf, StrtabHeader);
-       //printf("ai %s\n", (elf+SymtabHeader->sh_offset));     
+    }
+
+    else if(argv[1][1] == 'h'){
+
+        //cada header tem 0x28 bytes
+
+        write(1, "Sections:\n", 10);
+        write(1, "Idx Name Size VMA Type\n", 23);
+
+
+        for(int i=0; i < header->e_shnum; i++){
+            
+            Elf32_Shdr *HeaderAtual = (Elf32_Shdr *) (elf + header->e_shoff + 40 * i);
+            char indice[2];
+            indice[0] = i + 48;
+            indice[1] = ' ';
+
+
+            write(1, indice, 2);
+            write(1, (elf + HeaderShstrtab->sh_offset + HeaderAtual->sh_name),
+                  TamanhoString(elf + HeaderShstrtab->sh_offset + HeaderAtual->sh_name));
+
+            DecHex(HeaderAtual->sh_size);
+            write(1, " ", 1);
+            write(1, ResultadoConversao, TamanhoString(ResultadoConversao));
+
+            DecHex(HeaderAtual->sh_addr);
+            write(1, " ", 1);
+            write(1, ResultadoConversao, TamanhoString(ResultadoConversao));
+         
+            write(1, "\n", 1);
+        }
+
 
 
 
     }
 
-    //printf("%d\n", header->e_entry);
+
+    
     
 }
 
