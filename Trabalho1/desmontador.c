@@ -4,8 +4,8 @@
 
 unsigned char ResultadoConversao[100];
 unsigned char ResultadoIntStr[100];
-unsigned char ListaRotulos[100][2][100];
-unsigned char ResultadoOrdenacao[100][2][100];
+unsigned char ResultadoRemocao[100];
+unsigned char ResultadoConversaoHexDec[100];
 
 typedef struct
 {
@@ -49,6 +49,34 @@ typedef struct
     unsigned short st_shndx; // Section index
 } Elf32_Sym;
 
+typedef struct{
+
+	unsigned char str1[100];
+	unsigned char str2[100];
+	unsigned int n1;
+
+
+
+} Lista;
+
+Lista ListaRotulos[100];
+Lista ResultadoOrdenacao[100];
+
+int pot(int n, int potencia){
+
+
+	int resultado = 1;
+	
+	for(int i=0 ; i < potencia; i++){
+
+		resultado = resultado * n;
+
+	}
+	return resultado;
+
+
+}
+
 
 int TamanhoString(unsigned char *str){
 
@@ -69,6 +97,14 @@ int min(int n1, int n2){
 
 }
 
+int max(int n1, int n2){
+
+	if(n1 >= n2) return n1;
+
+	return n2;
+
+}
+
 int StrComp(unsigned char *str1, unsigned char *str2){
 
 	int tamanho1 = 0;
@@ -77,7 +113,7 @@ int StrComp(unsigned char *str1, unsigned char *str2){
 	while(str1[tamanho1] != '\0') tamanho1 += 1;
 	while(str2[tamanho2] != '\0') tamanho2 += 1;
 
-	for(int i=0; i < min(tamanho1, tamanho2); i++){
+	for(int i=0; i < max(min(tamanho1, tamanho2), 1); i++){
 
 		if(str1[i] < str2[i]) return -1;
 
@@ -105,7 +141,7 @@ void InverteString(char *str){
 
 }
 
-void OrdenaPorPosicao(unsigned char Lista[100][2][100], int TamanhoLista){
+void OrdenaPorPosicao(Lista Lista[100], int TamanhoLista){
 
 	
 
@@ -119,14 +155,14 @@ void OrdenaPorPosicao(unsigned char Lista[100][2][100], int TamanhoLista){
         for(int k=0; k < 8; k++){
 
 
-          if(Lista[j][0][k] < Lista[indiceMenor][0][k]){
+          if(Lista[j].str1[k] < Lista[indiceMenor].str1[k]){
 
             indiceMenor = j;
             break;
             
           }
 
-          if(Lista[j][0][k] > Lista[indiceMenor][0][k]){
+          if(Lista[j].str1[k] > Lista[indiceMenor].str1[k]){
 
             break;
             
@@ -136,23 +172,56 @@ void OrdenaPorPosicao(unsigned char Lista[100][2][100], int TamanhoLista){
     }
 
 
-		for(int k = 0; k < TamanhoString(Lista[indiceMenor][0]); k++){
+		for(int k = 0; k < TamanhoString(Lista[indiceMenor].str1); k++){
 
-			ResultadoOrdenacao[i][0][k] = Lista[indiceMenor][0][k];
-
-		}
-
-
-		for(int k = 0; k < TamanhoString(Lista[indiceMenor][1]); k++){
-
-			ResultadoOrdenacao[i][1][k] = Lista[indiceMenor][1][k];
+			ResultadoOrdenacao[i].str1[k] = Lista[indiceMenor].str1[k];
 
 		}
+		ResultadoOrdenacao[i].str1[TamanhoString(Lista[indiceMenor].str1)] = '\0';
 
-		Lista[indiceMenor][0][0] = 'g';
+
+		for(int k = 0; k < TamanhoString(Lista[indiceMenor].str2); k++){
+
+			ResultadoOrdenacao[i].str2[k] = Lista[indiceMenor].str2[k];
+
+		}
+		ResultadoOrdenacao[i].str2[TamanhoString(Lista[indiceMenor].str2)] = '\0';
+
+		ResultadoOrdenacao[i].n1 = Lista[indiceMenor].n1;
+		
+		
+
+		Lista[indiceMenor].str1[0] = 'g';
 
 
 	}
+
+
+}
+
+int HexDec(unsigned char *entrada){
+
+	int tamanho = TamanhoString(entrada);
+	int resultado = 0;
+
+	for(int i=0; i < tamanho; i++){
+
+		if(entrada[i] >= 'a' && entrada[i] <= 'g'){
+
+			//char - 87
+			resultado += (entrada[i] - 87) * pot(16, tamanho - i - 1);
+
+		}
+
+		else{
+
+			resultado += (entrada[i] - 48) * pot(16, tamanho - i - 1);
+
+
+		}
+		
+	}
+	return resultado;
 
 
 }
@@ -211,6 +280,25 @@ void DecHex(int entrada) {
 
 }
 
+void RemoveZerosDaFrente(unsigned char *string){
+
+	int tamanho = TamanhoString(string);
+	int gatilho = 0;
+	int defasagem;
+
+	for(int i=0 ; i < tamanho; i++){
+
+		if(gatilho == 0 && string[i] != '0'){
+			gatilho = 1;
+			defasagem = i;
+		} 
+
+		if(gatilho == 1) ResultadoRemocao[i - defasagem] = string[i];
+
+	}
+
+}
+
 int StringsIguais(char *str1, unsigned char *str2){
 
     int tamanho = 0;
@@ -228,11 +316,9 @@ int StringsIguais(char *str1, unsigned char *str2){
 }
 
 
+
+
 int main( int argc, char *argv[ ]){
-
-   
-    
-
 
     unsigned char elf[1000000];
 
@@ -297,10 +383,12 @@ int main( int argc, char *argv[ ]){
 
       for(int j = 0; j < 8; j++){
 
-        ListaRotulos[i/16][0][j] = ResultadoConversao[j];
+        ListaRotulos[i/16].str1[j] = ResultadoConversao[j];
 
         
-        ListaRotulos[i/16][1][j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
+        ListaRotulos[i/16].str2[j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
+
+		ListaRotulos[i/16].n1 = SymbolsList[i/16]->st_size;
 
 		TamanhoLista += 1;
       }
@@ -315,7 +403,8 @@ int main( int argc, char *argv[ ]){
 
 
     write(1, "\n", 1);
-    write(1, "test-01.x:	file format elf32-littleriscv", 40);
+	write(1, argv[2], TamanhoString((unsigned char*)argv[2]));
+    write(1, ": file format elf32-littleriscv", 31);
     write(1, "\n\n", 2);
 
 
@@ -393,21 +482,58 @@ int main( int argc, char *argv[ ]){
     }
 
     else if(argv[1][1] == 'd'){
+		DecHex(TextHeader->sh_offset);
+		write(1, "Disassembly of section .text:\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n"));
 
+		int offset = 0;	
         for(int i=1; i < TamanhoLista; i++){
-			DecHex(TextHeader->sh_offset);
+			
 
-          if(StrComp(ResultadoOrdenacao[i][0], ResultadoConversao) >= 0){
-
-				write(1, ResultadoOrdenacao[i][0], TamanhoString(ResultadoOrdenacao[i][0]));
+					
+          if(StrComp(ResultadoOrdenacao[i].str1, ResultadoConversao) >= 0){
+		
+				write(1, ResultadoOrdenacao[i].str1, TamanhoString(ResultadoOrdenacao[i].str1));
 				write(1, " ", 1);
 
-				write(1, ResultadoOrdenacao[i][1], TamanhoString(ResultadoOrdenacao[i][1]));
+				write(1, "<", 1);
+				write(1, ResultadoOrdenacao[i].str2, TamanhoString(ResultadoOrdenacao[i].str2));
+				write(1, ">:", 2);
 				write(1, "\n", 1);
+
+				int linhaText = HexDec(ResultadoOrdenacao[i].str1);	
+				
+
+
+				while(offset < TextHeader->sh_size){
+					if(i < TamanhoLista - 1 && linhaText >= HexDec(ResultadoOrdenacao[i + 1].str1)) break;
+
+					DecHex(linhaText);
+					RemoveZerosDaFrente(ResultadoConversao);
+					
+					write(1, "\t", 1);
+
+					
+					write(1, ResultadoRemocao, TamanhoString(ResultadoRemocao));
+					
+
+					write(1, ":", 1);
+
+					int valor = *(elf + TextHeader->sh_offset + offset);//tem que converter pra hexa ainda
+					printf("%d\n", valor);
+
+					//write(1, , 1);
+					//write(1, (elf + TextHeader->sh_offset + offset + 1), 1);
+					//write(1, (elf + TextHeader->sh_offset + offset + 2), 1);
+					//write(1, (elf + TextHeader->sh_offset + offset + 3), 1);
+
+					write(1, "\n", 1);
+					
+					linhaText += 4;
+					offset += 4;
+				}
 				
           }
 		  
-
 
         }
 
