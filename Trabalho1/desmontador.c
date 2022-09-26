@@ -2,8 +2,10 @@
 #include <unistd.h>
 #include <stdio.h>
 
-char ResultadoConversao[100];
-char ResultadoIntStr[100];
+unsigned char ResultadoConversao[100];
+unsigned char ResultadoIntStr[100];
+unsigned char ListaRotulos[100][2][100];
+unsigned char ResultadoOrdenacao[100][2][100];
 
 typedef struct
 {
@@ -48,7 +50,7 @@ typedef struct
 } Elf32_Sym;
 
 
-int TamanhoString(char *str){
+int TamanhoString(unsigned char *str){
 
     int tamanho = 0;
     while(str[tamanho] != '\0') tamanho += 1;
@@ -57,13 +59,35 @@ int TamanhoString(char *str){
 
 }
 
-void ImprimeHeader(unsigned char * elf, Elf32_Shdr *Header){
 
-    for(int i=0; i < Header->sh_size; i++){
 
-        printf("%c\n", elf[Header->sh_offset + i]);
+int min(int n1, int n2){
 
-    }
+	if(n1 <= n2) return n1;
+
+	return n2;
+
+}
+
+int StrComp(unsigned char *str1, unsigned char *str2){
+
+	int tamanho1 = 0;
+	int tamanho2 = 0;
+
+	while(str1[tamanho1] != '\0') tamanho1 += 1;
+	while(str2[tamanho2] != '\0') tamanho2 += 1;
+
+	for(int i=0; i < min(tamanho1, tamanho2); i++){
+
+		if(str1[i] < str2[i]) return -1;
+
+        if(str1[i] > str2[i]) return 1;
+
+
+	}
+
+	return 0;
+
 }
 
 void InverteString(char *str){
@@ -78,6 +102,58 @@ void InverteString(char *str){
     }
 
     ResultadoConversao[tamanho] = '\0';
+
+}
+
+void OrdenaPorPosicao(unsigned char Lista[100][2][100], int TamanhoLista){
+
+	
+
+    for(int i=0; i < TamanhoLista; i++){
+
+		int indiceMenor = 0;
+
+		for(int j=0; j < TamanhoLista; j++){
+
+
+        for(int k=0; k < 8; k++){
+
+
+          if(Lista[j][0][k] < Lista[indiceMenor][0][k]){
+
+            indiceMenor = j;
+            break;
+            
+          }
+
+          if(Lista[j][0][k] > Lista[indiceMenor][0][k]){
+
+            break;
+            
+          }
+        
+      }
+    }
+
+
+		for(int k = 0; k < TamanhoString(Lista[indiceMenor][0]); k++){
+
+			ResultadoOrdenacao[i][0][k] = Lista[indiceMenor][0][k];
+
+		}
+
+
+		for(int k = 0; k < TamanhoString(Lista[indiceMenor][1]); k++){
+
+			ResultadoOrdenacao[i][1][k] = Lista[indiceMenor][1][k];
+
+		}
+
+		Lista[indiceMenor][0][0] = 'g';
+
+
+	}
+
 
 }
 
@@ -173,6 +249,7 @@ int main( int argc, char *argv[ ]){
 
     Elf32_Shdr *SymtabHeader = NULL;
     Elf32_Shdr *StrtabHeader = NULL;
+    Elf32_Shdr * TextHeader = NULL;
     
     for(int i = 0; i < header->e_shnum; i++){
 
@@ -195,35 +272,56 @@ int main( int argc, char *argv[ ]){
 
         }
 
+        if(StringsIguais("text", (elf + 1 + HeaderShstrtab->sh_offset + HeaderAtual->sh_name))){
+
+            TextHeader = HeaderAtual;
+            
+
+        }
+
     }
+
+    Elf32_Sym *SymbolsList[100];
+       
+    for(int i=0; i < SymtabHeader->sh_size; i += 16){
+
+        SymbolsList[i/16] = (Elf32_Sym *) (elf + SymtabHeader->sh_offset + i);
+
+    }
+
+    int TamanhoLista = 0;
+
+    for(int i=0; i < SymtabHeader->sh_size; i += 16){
+
+      DecHex(SymbolsList[i/16]->st_value);
+
+      for(int j = 0; j < 8; j++){
+
+        ListaRotulos[i/16][0][j] = ResultadoConversao[j];
+
+        
+        ListaRotulos[i/16][1][j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
+
+		TamanhoLista += 1;
+      }
+
+      
+    }
+
+	OrdenaPorPosicao(ListaRotulos, TamanhoLista);
+
+
+	
+
 
     write(1, "\n", 1);
     write(1, "test-01.x:	file format elf32-littleriscv", 40);
     write(1, "\n\n", 2);
 
+
     if(argv[1][1] == 't'){
 
-        
-
-       int x = SymtabHeader->sh_offset;
-       //printf("%d\n", x);
-       //printf("%d\n", SymtabHeader->sh_size);
-
-       Elf32_Sym * symbol1 = (Elf32_Sym *) (elf + SymtabHeader->sh_offset);
-
-        
-        Elf32_Sym *SymbolsList[100];
-       
-        for(int i=0; i < SymtabHeader->sh_size; i += 16){
-
-            SymbolsList[i/16] = (Elf32_Sym *) (elf + SymtabHeader->sh_offset + i);
-
-        }
-    
-        //printf("\n");
-        //printf("test-01.x:	file format elf32-littleriscv\n");
-
-        
+           
 
         for(int i = 1; i < SymtabHeader->sh_size/16; i++){
 
@@ -292,11 +390,29 @@ int main( int argc, char *argv[ ]){
             write(1, "\n", 1);
         }
 
-
-
-
     }
 
+    else if(argv[1][1] == 'd'){
+
+        for(int i=1; i < TamanhoLista; i++){
+			DecHex(TextHeader->sh_offset);
+
+          if(StrComp(ResultadoOrdenacao[i][0], ResultadoConversao) >= 0){
+
+				write(1, ResultadoOrdenacao[i][0], TamanhoString(ResultadoOrdenacao[i][0]));
+				write(1, " ", 1);
+
+				write(1, ResultadoOrdenacao[i][1], TamanhoString(ResultadoOrdenacao[i][1]));
+				write(1, "\n", 1);
+				
+          }
+		  
+
+
+        }
+
+        
+    }
 
     
     
