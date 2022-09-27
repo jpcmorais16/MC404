@@ -288,14 +288,16 @@ void RemoveZerosDaFrente(unsigned char *string){
 
 	for(int i=0 ; i < tamanho; i++){
 
-		if(gatilho == 0 && string[i] != '0'){
+		if((gatilho == 0 && (string[i] != '0' || i == tamanho - 2))){
 			gatilho = 1;
 			defasagem = i;
+			//printf("\nDEFASAGEM: %d\n", defasagem);
 		} 
 
 		if(gatilho == 1) ResultadoRemocao[i - defasagem] = string[i];
 
 	}
+	ResultadoRemocao[tamanho - defasagem] = '\0';
 
 }
 
@@ -519,12 +521,36 @@ int main( int argc, char *argv[ ]){
 					write(1, ":", 1);
 
 					int valor = *(elf + TextHeader->sh_offset + offset);//tem que converter pra hexa ainda
-					printf("%d\n", valor);
+					//printf("aqui%d\n", *(elf + TextHeader->sh_offset + offset + 1));
 
-					//write(1, , 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 1), 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 2), 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 3), 1);
+          			DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					//printf("%s\n", ResultadoConversao);
+
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 1);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 2);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 3);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+
+					write(1, ResultadoRemocao, 2);
 
 					write(1, "\n", 1);
 					
