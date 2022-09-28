@@ -407,7 +407,7 @@ void DescobreInstrucao(unsigned char *elf, unsigned int offset){
 	hexa[8] = '\0';
 
 	HexBin(hexa);
-	printf("Binario: %s\n", Binario);
+	//printf("Binario: %s\n", Binario);
 
 	//printf("\nAQUI\n");
 	//SizedStrComp("1111011\n", Binario, 0, 7);
@@ -524,10 +524,12 @@ int main( int argc, char *argv[ ]){
 
     unsigned char elf[1000000];
 
+
     int fd = open( argv[2] , O_RDONLY);
+	//int fd = open( "bin/test-19.x" , O_RDONLY);
     Elf32_Ehdr *header;
 
-    read(fd, elf, 100000);
+    read(fd, elf, 1000000);
     header = (Elf32_Ehdr *) &elf;
 
     int PosicaoHeaderShstrtab = header->e_shstrndx * 40 + header->e_shoff;
@@ -579,31 +581,9 @@ int main( int argc, char *argv[ ]){
 
     int TamanhoLista = 0;
 
-    for(int i=0; i < SymtabHeader->sh_size; i += 16){
-
-      DecHex(SymbolsList[i/16]->st_value);
-
-      for(int j = 0; j < 8; j++){
-
-        ListaRotulos[i/16].str1[j] = ResultadoConversao[j];
-
-        
-        ListaRotulos[i/16].str2[j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
-
-		ListaRotulos[i/16].n1 = SymbolsList[i/16]->st_size;
-
-		TamanhoLista += 1;
-      }
-
-      
-    }
-
-	OrdenaPorPosicao(ListaRotulos, TamanhoLista);
-
+    
 
 	
-
-
     write(1, "\n", 1);
 	write(1, argv[2], TamanhoString((unsigned char*)argv[2]));
     write(1, ": file format elf32-littleriscv", 31);
@@ -611,11 +591,11 @@ int main( int argc, char *argv[ ]){
 
 
     if(argv[1][1] == 't'){
+	//if(1){
 
            
-
+		write(1, "SYMBOL TABLE:\n", TamanhoString((unsigned char *)"SYMBOL TABLE:\n"));
         for(int i = 1; i < SymtabHeader->sh_size/16; i++){
-
 
             DecHex(SymbolsList[i]->st_value);
 
@@ -632,7 +612,29 @@ int main( int argc, char *argv[ ]){
             write(1, coluna2, 1);
             write(1, " ", 1);
 
-            write(1, (elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset), TamanhoString((elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset)));
+			int contadorPontos = 0;
+			int it = 0;
+			int gatilho = 0;
+			while(contadorPontos < SymbolsList[i]->st_shndx){
+
+				if(*(elf + HeaderShstrtab->sh_offset + it) == '.') contadorPontos += 1;
+
+				it += 1;
+				if(SymbolsList[i]->st_shndx > 100){
+					gatilho = 1;
+					break;
+				}
+
+
+			}
+			
+            if(gatilho == 0){
+				write(1, (elf + it + HeaderShstrtab->sh_offset - 1), TamanhoString((elf + it + HeaderShstrtab->sh_offset - 1)));
+			}
+			else {
+				write(1, "*ABS*", 5);
+			}
+			
             write(1, " ", 1);
 
             DecHex(SymbolsList[i]->st_size);
@@ -680,18 +682,43 @@ int main( int argc, char *argv[ ]){
          
             write(1, "\n", 1);
         }
+		write(1, "\n", 1);
 
     }
 
     else if(argv[1][1] == 'd'){
+
+		for(int i=0; i < SymtabHeader->sh_size; i += 16){
+
+      DecHex(SymbolsList[i/16]->st_value);
+
+      for(int j = 0; j < 8; j++){
+
+        ListaRotulos[i/16].str1[j] = ResultadoConversao[j];
+
+        
+        ListaRotulos[i/16].str2[j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
+
+		ListaRotulos[i/16].n1 = SymbolsList[i/16]->st_size;
+
+		TamanhoLista += 1;
+      }
+
+      
+    }
+
+	OrdenaPorPosicao(ListaRotulos, TamanhoLista);
+
+
+
 		DecHex(TextHeader->sh_offset);
-		write(1, "Disassembly of section .text:\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n"));
+		write(1, "Disassembly of section .text:\n\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n\n"));
 
 		int offset = 0;	
         for(int i=1; i < TamanhoLista; i++){
 			
 
-					
+		  //NAO PRINTAR ROTULOS SEM INSTRUCAO			
           if(StrComp(ResultadoOrdenacao[i].str1, ResultadoConversao) >= 0){
 		
 				write(1, ResultadoOrdenacao[i].str1, TamanhoString(ResultadoOrdenacao[i].str1));
@@ -755,11 +782,12 @@ int main( int argc, char *argv[ ]){
 					DescobreInstrucao(elf, TextHeader->sh_offset + offset);
 
 					write(1, "\n", 1);
-					printf("Instrucao: %s\n", Instrucao);
+					//printf("Instrucao: %s\n", Instrucao);
 					
 					linhaText += 4;
 					offset += 4;
 				}
+				write(1, "\n", 1);
 				
           }
 		  
