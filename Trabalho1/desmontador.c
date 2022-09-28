@@ -63,8 +63,8 @@ typedef struct{
 
 } Lista;
 
-Lista ListaRotulos[100];
-Lista ResultadoOrdenacao[100];
+Lista ListaRotulos[1000];
+Lista ResultadoOrdenacao[1000];
 
 int pot(int n, int potencia){
 
@@ -145,7 +145,7 @@ void InverteString(char *str){
 
 }
 
-void OrdenaPorPosicao(Lista Lista[100], int TamanhoLista){
+void OrdenaPorPosicao(Lista Lista[1000], int TamanhoLista){
 
 	
 
@@ -591,7 +591,7 @@ int main( int argc, char *argv[ ]){
 
 
     if(argv[1][1] == 't'){
-	//if(1){
+	//if(0){
 
            
 		write(1, "SYMBOL TABLE:\n", TamanhoString((unsigned char *)"SYMBOL TABLE:\n"));
@@ -620,7 +620,7 @@ int main( int argc, char *argv[ ]){
 				if(*(elf + HeaderShstrtab->sh_offset + it) == '.') contadorPontos += 1;
 
 				it += 1;
-				if(SymbolsList[i]->st_shndx > 100){
+				if(SymbolsList[i]->st_shndx > 1000){
 					gatilho = 1;
 					break;
 				}
@@ -653,6 +653,7 @@ int main( int argc, char *argv[ ]){
     }
 
     else if(argv[1][1] == 'h'){
+	//else if(0){
 
         //cada header tem 0x28 bytes
 
@@ -687,6 +688,8 @@ int main( int argc, char *argv[ ]){
     }
 
     else if(argv[1][1] == 'd'){
+	//else if(1){
+		write(1, "\n", 1);
 
 		for(int i=0; i < SymtabHeader->sh_size; i += 16){
 
@@ -715,7 +718,7 @@ int main( int argc, char *argv[ ]){
 		write(1, "Disassembly of section .text:\n\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n\n"));
 
 		int offset = 0;	
-        for(int i=1; i < TamanhoLista; i++){
+        for(int i=1; i < TamanhoLista && offset < TextHeader->sh_size; i++){
 			
 
 		  //NAO PRINTAR ROTULOS SEM INSTRUCAO			
@@ -745,7 +748,7 @@ int main( int argc, char *argv[ ]){
 					write(1, ResultadoRemocao, TamanhoString(ResultadoRemocao));
 					
 
-					write(1, ":", 1);
+					write(1, ": ", 2);
 
 					int valor = *(elf + TextHeader->sh_offset + offset);//tem que converter pra hexa ainda
 					//printf("aqui%d\n", *(elf + TextHeader->sh_offset + offset + 1));
