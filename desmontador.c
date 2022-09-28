@@ -6,6 +6,12 @@ unsigned char ResultadoConversao[100];
 unsigned char ResultadoIntStr[100];
 unsigned char ResultadoRemocao[100];
 unsigned char ResultadoConversaoHexDec[100];
+unsigned char Instrucao[100];
+unsigned char BinarioParcial[100];
+unsigned char Binario[100];
+unsigned int TamanhoAtualBinario = 0;
+unsigned char EndianessRevertido[100];
+unsigned char ResultadoReversao[100];
 
 typedef struct
 {
@@ -59,8 +65,8 @@ typedef struct{
 
 } Lista;
 
-Lista ListaRotulos[100];
-Lista ResultadoOrdenacao[100];
+Lista ListaRotulos[1000];
+Lista ResultadoOrdenacao[1000];
 
 int pot(int n, int potencia){
 
@@ -141,7 +147,7 @@ void InverteString(char *str){
 
 }
 
-void OrdenaPorPosicao(Lista Lista[100], int TamanhoLista){
+void OrdenaPorPosicao(Lista Lista[1000], int TamanhoLista){
 
 	
 
@@ -288,14 +294,16 @@ void RemoveZerosDaFrente(unsigned char *string){
 
 	for(int i=0 ; i < tamanho; i++){
 
-		if(gatilho == 0 && string[i] != '0'){
+		if((gatilho == 0 && (string[i] != '0' || i == tamanho - 2))){
 			gatilho = 1;
 			defasagem = i;
+			//printf("\nDEFASAGEM: %d\n", defasagem);
 		} 
 
 		if(gatilho == 1) ResultadoRemocao[i - defasagem] = string[i];
 
 	}
+	ResultadoRemocao[tamanho - defasagem] = '\0';
 
 }
 
@@ -315,6 +323,249 @@ int StringsIguais(char *str1, unsigned char *str2){
 
 }
 
+int SizedStrComp(char *str1, unsigned char *str2, int begin, int size){
+
+	
+	for(int i= 0; i < size; i ++){
+		//printf("\n%c %c\n", str1[i], str2[i]);
+
+		if(str1[i] < str2[begin + i]) {//printf("FIM\n");
+		 return -1;}
+
+        if(str1[i] > str2[begin + i]) {//printf("FIM\n");
+		return 1;}
+
+	}
+	
+	return 0;
+
+}
+
+
+
+void AdicionaAoBinario(char *entrada){
+
+
+	for(int i = 0; i < 4; i ++)
+		Binario[TamanhoAtualBinario + i] = entrada[i];
+
+	
+	TamanhoAtualBinario += 4;
+
+}
+
+void HexBin(unsigned char *hexa){
+
+	TamanhoAtualBinario = 0;
+	
+
+	for(int i = 0; i < 32; i += 4){
+
+		switch(hexa[i/4]){
+
+			case 'f': AdicionaAoBinario("1111"); break;
+			case 'e': AdicionaAoBinario("1110"); break;
+			case 'd': AdicionaAoBinario("1101"); break;
+			case 'c': AdicionaAoBinario("1100"); break;
+			case 'b': AdicionaAoBinario("1011"); break;
+			case 'a': AdicionaAoBinario("1010"); break;
+			case '9': AdicionaAoBinario("1001"); break;
+			case '8': AdicionaAoBinario("1000"); break;
+			case '7': AdicionaAoBinario("0111"); break;
+			case '6': AdicionaAoBinario("0110"); break;
+			case '5': AdicionaAoBinario("0101"); break;
+			case '4': AdicionaAoBinario("0100"); break;
+			case '3': AdicionaAoBinario("0011"); break;
+			case '2': AdicionaAoBinario("0010"); break;
+			case '1': AdicionaAoBinario("0001"); break;
+			case '0': AdicionaAoBinario("0000"); break;
+			default: break;
+
+		}
+	}
+	
+}
+
+void CopiaInstrucao(char *instr){
+
+	int tamanho = TamanhoString((unsigned char *) instr);
+
+	for(int i=0; i < tamanho; i++){
+		Instrucao[i] = instr[i];
+	}
+}
+
+void ReverteEndianess(unsigned char* hexa){
+
+	for(int i = 0; i < 8; i += 2){
+
+		EndianessRevertido[i] = hexa[6 - i];
+		EndianessRevertido[i + 1] = hexa[7 - i];
+
+	}
+	EndianessRevertido[8] = '\0';
+
+
+}
+
+void ReverteString(unsigned char *string){
+
+	int tamanho = TamanhoString(string);
+	
+	for(int i = 0; i < tamanho; i++){
+
+		ResultadoReversao[i] = string[tamanho - i - 1];
+
+	}
+	ResultadoReversao[tamanho] = '\0';
+
+
+}
+
+void StrCopyBin(unsigned char* string){
+
+	int tamanho = TamanhoString(string);
+
+	for(int i=0 ;i <= tamanho; i++)
+		Binario[i] = string[i];
+
+	
+
+}
+
+
+void DescobreInstrucao(unsigned char *elf, unsigned int offset){
+
+
+	unsigned char hexa[100];
+	for(int i = 0; i < 8; i += 2){
+		unsigned int valor  = *(elf + offset + i/2);
+		DecHex(valor);
+		//printf("\n Resultado: %s\n", ResultadoConversao);
+
+		hexa[i] = ResultadoConversao[6];
+		hexa[i + 1] = ResultadoConversao[7];
+	}
+	hexa[8] = '\0';
+
+	ReverteEndianess(hexa);
+
+	HexBin(EndianessRevertido);
+
+	ReverteString(Binario);
+
+	StrCopyBin(ResultadoReversao);
+
+	//printf("Binario: %s\n", Binario);
+
+	//printf("\nAQUI\n");
+	//SizedStrComp("1111011\n", Binario, 0, 7);
+
+	if(SizedStrComp("1110110", Binario, 1, 7) == 0) CopiaInstrucao("lui");
+	else if(SizedStrComp("1110100", Binario, 0, 7) == 0) CopiaInstrucao("auipc");
+	else if(SizedStrComp("1111011", Binario, 0, 7) == 0) CopiaInstrucao("jal");
+	else if(SizedStrComp("1110011", Binario, 0, 7) == 0) {CopiaInstrucao("jalr");}
+
+	else if(SizedStrComp("1110110", Binario, 0, 7) == 0) {
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("beq");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("bne");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("blt");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("bge");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("bltu");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("bgeu");
+
+	}
+
+	else if(SizedStrComp("1100000", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("lb");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("lh");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("lw");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("lbu");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("lhu");
+
+	}
+
+	else if(SizedStrComp("1100010", Binario, 0, 7) == 0){
+		
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("sb");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("sh");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("sw");
+
+	}
+
+	else if(SizedStrComp("1100100", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("addi");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("slti");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("sltiu");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("xori");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("ori");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("andi");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("slli");
+
+		if(SizedStrComp("101", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("srli");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("srai");
+		
+		}
+		
+	}	
+
+	else if(SizedStrComp("1100110", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("add");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("sub");
+		}
+
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("sll");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("slt");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("sltu");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("xor");
+
+		if(SizedStrComp("101", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("srl");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("sra");
+		}
+
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("or");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("and");
+	}
+	
+	else if(SizedStrComp("1111000", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("fence");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("fence.i");
+	}
+
+	else if(SizedStrComp("1100111", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) {
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("ecall");
+			if(SizedStrComp("1000000", Binario, 25, 7) == 0) CopiaInstrucao("ebreak");				
+		}
+
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("csrrw");		
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("csrrs");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("csrrc");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("csrrwi");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("csrrsi");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("csrrci");
+
+	}
+	else {
+		CopiaInstrucao("<unknown>");
+	}
+
+
+}
+
 
 
 
@@ -322,10 +573,12 @@ int main( int argc, char *argv[ ]){
 
     unsigned char elf[1000000];
 
+
     int fd = open( argv[2] , O_RDONLY);
+	//int fd = open( "executavel.x" , O_RDONLY);
     Elf32_Ehdr *header;
 
-    read(fd, elf, 100000);
+    read(fd, elf, 1000000);
     header = (Elf32_Ehdr *) &elf;
 
     int PosicaoHeaderShstrtab = header->e_shstrndx * 40 + header->e_shoff;
@@ -377,31 +630,9 @@ int main( int argc, char *argv[ ]){
 
     int TamanhoLista = 0;
 
-    for(int i=0; i < SymtabHeader->sh_size; i += 16){
-
-      DecHex(SymbolsList[i/16]->st_value);
-
-      for(int j = 0; j < 8; j++){
-
-        ListaRotulos[i/16].str1[j] = ResultadoConversao[j];
-
-        
-        ListaRotulos[i/16].str2[j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
-
-		ListaRotulos[i/16].n1 = SymbolsList[i/16]->st_size;
-
-		TamanhoLista += 1;
-      }
-
-      
-    }
-
-	OrdenaPorPosicao(ListaRotulos, TamanhoLista);
-
+    
 
 	
-
-
     write(1, "\n", 1);
 	write(1, argv[2], TamanhoString((unsigned char*)argv[2]));
     write(1, ": file format elf32-littleriscv", 31);
@@ -409,11 +640,11 @@ int main( int argc, char *argv[ ]){
 
 
     if(argv[1][1] == 't'){
+	//if(0){
 
            
-
+		write(1, "SYMBOL TABLE:\n", TamanhoString((unsigned char *)"SYMBOL TABLE:\n"));
         for(int i = 1; i < SymtabHeader->sh_size/16; i++){
-
 
             DecHex(SymbolsList[i]->st_value);
 
@@ -430,7 +661,29 @@ int main( int argc, char *argv[ ]){
             write(1, coluna2, 1);
             write(1, " ", 1);
 
-            write(1, (elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset), TamanhoString((elf + SymbolsList[i]->st_shndx + HeaderShstrtab->sh_offset)));
+			int contadorPontos = 0;
+			int it = 0;
+			int gatilho = 0;
+			while(contadorPontos < SymbolsList[i]->st_shndx){
+
+				if(*(elf + HeaderShstrtab->sh_offset + it) == '.') contadorPontos += 1;
+
+				it += 1;
+				if(SymbolsList[i]->st_shndx > 1000){
+					gatilho = 1;
+					break;
+				}
+
+
+			}
+			
+            if(gatilho == 0){
+				write(1, (elf + it + HeaderShstrtab->sh_offset - 1), TamanhoString((elf + it + HeaderShstrtab->sh_offset - 1)));
+			}
+			else {
+				write(1, "*ABS*", 5);
+			}
+			
             write(1, " ", 1);
 
             DecHex(SymbolsList[i]->st_size);
@@ -449,6 +702,7 @@ int main( int argc, char *argv[ ]){
     }
 
     else if(argv[1][1] == 'h'){
+	//else if(0){
 
         //cada header tem 0x28 bytes
 
@@ -478,18 +732,45 @@ int main( int argc, char *argv[ ]){
          
             write(1, "\n", 1);
         }
+		write(1, "\n", 1);
 
     }
 
     else if(argv[1][1] == 'd'){
+	//else if(1){
+		write(1, "\n", 1);
+
+		for(int i=0; i < SymtabHeader->sh_size; i += 16){
+
+      DecHex(SymbolsList[i/16]->st_value);
+
+      for(int j = 0; j < 8; j++){
+
+        ListaRotulos[i/16].str1[j] = ResultadoConversao[j];
+
+        
+        ListaRotulos[i/16].str2[j] = (elf + SymbolsList[i/16]->st_name + StrtabHeader->sh_offset)[j];
+
+		ListaRotulos[i/16].n1 = SymbolsList[i/16]->st_size;
+
+		TamanhoLista += 1;
+      }
+
+      
+    }
+
+	OrdenaPorPosicao(ListaRotulos, TamanhoLista);
+
+
+
 		DecHex(TextHeader->sh_offset);
-		write(1, "Disassembly of section .text:\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n"));
+		write(1, "Disassembly of section .text:\n\n", TamanhoString((unsigned char*)"Disassembly of section .text:\n\n"));
 
 		int offset = 0;	
-        for(int i=1; i < TamanhoLista; i++){
+        for(int i=1; i < TamanhoLista && offset < TextHeader->sh_size; i++){
 			
 
-					
+		  //NAO PRINTAR ROTULOS SEM INSTRUCAO			
           if(StrComp(ResultadoOrdenacao[i].str1, ResultadoConversao) >= 0){
 		
 				write(1, ResultadoOrdenacao[i].str1, TamanhoString(ResultadoOrdenacao[i].str1));
@@ -516,21 +797,52 @@ int main( int argc, char *argv[ ]){
 					write(1, ResultadoRemocao, TamanhoString(ResultadoRemocao));
 					
 
-					write(1, ":", 1);
+					write(1, ": ", 2);
 
 					int valor = *(elf + TextHeader->sh_offset + offset);//tem que converter pra hexa ainda
-					printf("%d\n", valor);
+					//printf("aqui%d\n", *(elf + TextHeader->sh_offset + offset + 1));
 
-					//write(1, , 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 1), 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 2), 1);
-					//write(1, (elf + TextHeader->sh_offset + offset + 3), 1);
+          			DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					//printf("%s\n", ResultadoConversao);
+
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 1);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 2);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+					write(1, ResultadoRemocao, 2);
+
+					valor = *(elf + TextHeader->sh_offset + offset + 3);
+					DecHex(valor);
+					RemoveZerosDaFrente(ResultadoConversao);
+					write(1, " ", 1);
+
+
+					write(1, ResultadoRemocao, 2);
+					write(1, " ", 1);
+
+					DescobreInstrucao(elf, TextHeader->sh_offset + offset);
+
+					write(1, Instrucao, TamanhoString(Instrucao));
 
 					write(1, "\n", 1);
+					//printf("Instrucao: %s\n", Instrucao);
 					
 					linhaText += 4;
 					offset += 4;
 				}
+				write(1, "\n", 1);
 				
           }
 		  
