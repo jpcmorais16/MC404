@@ -6,6 +6,10 @@ unsigned char ResultadoConversao[100];
 unsigned char ResultadoIntStr[100];
 unsigned char ResultadoRemocao[100];
 unsigned char ResultadoConversaoHexDec[100];
+unsigned char Instrucao[100];
+unsigned char BinarioParcial[100];
+unsigned char Binario[100];
+unsigned int TamanhoAtualBinario = 0;
 
 typedef struct
 {
@@ -317,6 +321,202 @@ int StringsIguais(char *str1, unsigned char *str2){
 
 }
 
+int SizedStrComp(char *str1, unsigned char *str2, int begin, int size){
+
+	
+	for(int i= begin; i < begin + size + 1; i ++){
+		//printf("\n%c %c\n", str1[i], str2[i]);
+
+		if(str1[i] < str2[i]) {//printf("FIM\n");
+		 return -1;}
+
+        if(str1[i] > str2[i]) {//printf("FIM\n");
+		return 1;}
+
+	}
+	
+	return 0;
+
+}
+
+
+
+void AdicionaAoBinario(char *entrada){
+
+
+	for(int i = 0; i < 4; i ++)
+		Binario[TamanhoAtualBinario + i] = entrada[i];
+
+	
+	TamanhoAtualBinario += 4;
+
+}
+
+void HexBin(unsigned char *hexa){
+
+	TamanhoAtualBinario = 0;
+
+	for(int i = 0; i < 32; i += 4){
+
+		switch(hexa[i/4]){
+
+			case 'f': AdicionaAoBinario("1111"); break;
+			case 'e': AdicionaAoBinario("1110"); break;
+			case 'd': AdicionaAoBinario("1101"); break;
+			case 'c': AdicionaAoBinario("1100"); break;
+			case 'b': AdicionaAoBinario("1011"); break;
+			case 'a': AdicionaAoBinario("1010"); break;
+			case '9': AdicionaAoBinario("1001"); break;
+			case '8': AdicionaAoBinario("1000"); break;
+			case '7': AdicionaAoBinario("0111"); break;
+			case '6': AdicionaAoBinario("0110"); break;
+			case '5': AdicionaAoBinario("0101"); break;
+			case '4': AdicionaAoBinario("0100"); break;
+			case '3': AdicionaAoBinario("0011"); break;
+			case '2': AdicionaAoBinario("0010"); break;
+			case '1': AdicionaAoBinario("0001"); break;
+			case '0': AdicionaAoBinario("0000"); break;
+			default: break;
+
+		}
+	}
+}
+
+void CopiaInstrucao(char *instr){
+
+	int tamanho = TamanhoString((unsigned char *) instr);
+
+	for(int i=0; i < tamanho; i++){
+		Instrucao[i] = instr[i];
+	}
+}
+
+
+void DescobreInstrucao(unsigned char *elf, unsigned int offset){
+
+
+	unsigned char hexa[100];
+	for(int i = 0; i < 8; i += 2){
+
+		DecHex(*(elf + offset + i/2));
+		//printf("\n Resultado: %s\n", ResultadoConversao);
+
+		hexa[i] = ResultadoConversao[6];
+		hexa[i + 1] = ResultadoConversao[7];
+	}
+	hexa[8] = '\0';
+
+	HexBin(hexa);
+	printf("Binario: %s\n", Binario);
+
+	//printf("\nAQUI\n");
+	//SizedStrComp("1111011\n", Binario, 0, 7);
+
+	if(SizedStrComp("1110110", Binario, 1, 7) == 0) CopiaInstrucao("lui");
+	else if(SizedStrComp("1110100", Binario, 0, 7) == 0) CopiaInstrucao("auipc");
+	else if(SizedStrComp("1111011", Binario, 0, 7) == 0) CopiaInstrucao("jal");
+	else if(SizedStrComp("1110011", Binario, 0, 7) == 0) {CopiaInstrucao("jalr");}
+
+	else if(SizedStrComp("1110110", Binario, 0, 7) == 0) {
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("beq");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("bne");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("blt");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("bge");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("bltu");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("bgeu");
+
+	}
+
+	else if(SizedStrComp("1100000", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("lb");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("lh");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("lw");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("lbu");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("lhu");
+
+	}
+
+	else if(SizedStrComp("1100010", Binario, 0, 7) == 0){
+		
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("sb");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("sh");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("sw");
+
+	}
+
+	else if(SizedStrComp("1100100", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("addi");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("slti");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("sltiu");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("xori");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("ori");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("andi");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("slli");
+
+		if(SizedStrComp("101", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("srli");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("srai");
+		
+		}
+		
+	}	
+
+	else if(SizedStrComp("1100110", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("add");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("sub");
+		}
+
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("sll");
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("slt");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("sltu");
+		if(SizedStrComp("001", Binario, 12, 3) == 0) CopiaInstrucao("xor");
+
+		if(SizedStrComp("101", Binario, 12, 3) == 0){
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("srl");
+			if(SizedStrComp("0000010", Binario, 25, 7) == 0) CopiaInstrucao("sra");
+		}
+
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("or");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("and");
+	}
+	
+	else if(SizedStrComp("1111000", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) CopiaInstrucao("fence");
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("fence.i");
+	}
+
+	else if(SizedStrComp("1100111", Binario, 0, 7) == 0){
+
+		if(SizedStrComp("000", Binario, 12, 3) == 0) {
+
+			if(SizedStrComp("0000000", Binario, 25, 7) == 0) CopiaInstrucao("ecall");
+			if(SizedStrComp("1000000", Binario, 25, 7) == 0) CopiaInstrucao("ebreak");				
+		}
+
+		if(SizedStrComp("100", Binario, 12, 3) == 0) CopiaInstrucao("csrrw");		
+		if(SizedStrComp("010", Binario, 12, 3) == 0) CopiaInstrucao("csrrs");
+		if(SizedStrComp("110", Binario, 12, 3) == 0) CopiaInstrucao("csrrc");
+		if(SizedStrComp("101", Binario, 12, 3) == 0) CopiaInstrucao("csrrwi");
+		if(SizedStrComp("011", Binario, 12, 3) == 0) CopiaInstrucao("csrrsi");
+		if(SizedStrComp("111", Binario, 12, 3) == 0) CopiaInstrucao("csrrci");
+
+	}
+	else {
+		CopiaInstrucao("<unknown>");
+	}
+
+
+}
+
 
 
 
@@ -552,7 +752,10 @@ int main( int argc, char *argv[ ]){
 
 					write(1, ResultadoRemocao, 2);
 
+					DescobreInstrucao(elf, TextHeader->sh_offset + offset);
+
 					write(1, "\n", 1);
+					printf("Instrucao: %s\n", Instrucao);
 					
 					linhaText += 4;
 					offset += 4;
