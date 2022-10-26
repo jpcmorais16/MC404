@@ -45,23 +45,52 @@ gets:
     mv t0, a0 # endereco da entrada em t0
 
     li a0, 0
-    li a1, t0
-    li a2, 100
-    li a7, 63
 
     li t1, '\n'
     li t2, 26
-    mv t3, t0 # iterador t3 (sobre a entrada)
+
+    li a0, 0
+    li a1, t0
+    li a2, 1
+    li a7, 63
     
     loop_gets:
-        lb t4, 0(t3)      
-        addi t3, t3, 1
+
+        ecall
+        addi a1, a1, 1
+
+        lb t4, 0(a1)
         bne t4, t1, loop_gets
         bne t4, t2, loop_gets
 
     li t1, '\0'
-    sb t1, 0(t3)
+    sb t1, 0(a1)
 
     mv a0, t0
     
     ret
+
+
+atoi:
+    mv t0, a0
+    
+    li t1, '\0'
+    li t2, 0
+    li t5, 10
+
+    loop_atoi:
+
+        mul t2, t2, t5
+
+        lb t3, 0(a0)
+        addi t3, t3, -'0'
+        add t2, t2, t3 
+       
+        addi t0, t0, 1
+
+        lb t4, 0(t0)
+        bne t4, t1, loop_atoi 
+
+    mv a0, t2
+    ret
+
