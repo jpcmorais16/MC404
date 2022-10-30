@@ -5,80 +5,67 @@ _start:
     jal open
     jal read
 
-    la a6, input_adress #bytes 3 e 5 sao largura e altura
+    la a6, input_adress
     jal getDimensions
-    #li a4, 0 #largura
-    #li a5, 0 #altura
-    #lw t3, 3(input_adress)
-    #lw t5, 5(input_adress)
 
-    #a0: largura do canvas (valor entre 0 e 512)
-    #a1: altura do canvas (valor entre 0 e 512)
-    #a7: 2201 (número da syscall)
-
-    #li a0, 24
-    #li a1, 7
     mv a0, a4
     mv a1, a5
     li a7, 2201
     ecall   
 
+
     li t5, 0
 
 loop_altura:
-
+    
+    
     li t4, 0
 
     loop_largura:
         
+        #====================================================
+        
+        mv a1, t4
+        mv a2, t5
+        jal pegaPixelDaImagemOriginal
+
+        lbu t0, 0(a0)
 
         mv a0, t4 # x atual da imagem
         mv a1, t5 # y atual da imagem
 
-        # a2
-        #===================
         li a2, 0
-        li t3, 256
+        li a3, 256
 
-        # lb t6, 0(a6)
-        # sll t6, t6, 24
-        # or a2, a2, t6
+        add a2, a2, t0
+        mul a2, a2, a3
 
-        # lb t6, 0(a6)
-        # sll t6, t6, 16
-        # or a2, a2, t6
+        add a2, a2, t0
+        mul a2, a2, a3
 
-        # lb t6, 0(a6)
-        # sll t6, t6, 8
-        # or a2, a2, t6
+        add a2, a2, t0
+        mul a2, a2, a3
 
-        # li t6, 255
-        # or a2, a2, t6
-
-        lbu t6, 0(a6)
-        mul a2, a2, t3
-        add a2, a2, t6
-
-        lbu t6, 0(a6)
-        mul a2, a2, t3
-        add a2, a2, t6
-
-        lbu t6, 0(a6)
-        mul a2, a2, t3
-        add a2, a2, t6
-
-        mul a2, a2, t3
-        add a2, a2, 255
-
-        #===================
+        addi a2, a2, 255
 
         jal setPixel
 
-        addi a6, a6, 1
+        #====================================================
         addi t4, t4, 1
         blt t4, a4, loop_largura # loop de largura 
+        j fim
+        
+        borda:
+            mv a0, t4
+            mv a1, t5
 
+            li a2, 255
+            jal setPixel
 
+            addi t4, t4, 1
+            blt t4, a4, loop_largura # loop de largura 
+
+    fim:
     addi t5, t5, 1
     blt t5, a5, loop_altura # loop de altura
 
@@ -90,7 +77,7 @@ loop_altura:
 
 open:
     la a0, input_file    # endereço do caminho para o arquivo
-    li a1, 0             # flags (0: rdonly, 1: wronly, 2: rdwr)
+    li a1, 0            # flags (0: rdonly, 1: wronly, 2: rdwr)
     li a2, 0             # modo
     li a7, 1024          # syscall open 
     ecall
@@ -106,7 +93,7 @@ read:
 setPixel:
     #li a0, 100 # coordenada x = 100
     #li a1, 200 # coordenada y = 200
-    #li a2, 0xFFFFFFFF # pixel branco
+    #li a2, 0 # pixel branco
     li a7, 2200 # syscall setGSPixel (2200)
     ecall
     ret
@@ -171,7 +158,17 @@ getDimensions:
         
 
     ret
+
+pegaPixelDaImagemOriginal: # nao pode usar t0, t1, t4, t5
     
+    #a1 -> x
+    #a2 -> y
+
+    mul t2, a2, a4
+    add t2, t2, a1
+
+    add a0, t2, a6
+    ret
 
     
 input_file: .asciz "imagem.pgm"
