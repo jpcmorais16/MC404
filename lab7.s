@@ -56,8 +56,14 @@ gets:
     
     loop_gets:
 
+        mv t5, a1
         ecall
-        addi a1, a1, 1
+        #addi a1, a1, 1
+
+        li a0, 0
+        addi a1, t5, 1
+        li a2, 1
+        li a7, 63
 
         lb t4, 0(a1)
         bne t4, t1, loop_gets
@@ -110,16 +116,23 @@ itoa:
 
 
 time:
-    addi sp, sp, -16
+    addi sp, sp, -32
 
-    la a0, 12(sp)
-    la a1, 8(sp)
+    la a0, 20(sp)
+    la a1, 16(sp)
     li a7, 169
     ecall
 
-    lw a0, 12(sp)
+    la a0, 20(sp)
+    lw t1, 0(a0) # tempo em segundos
+    lw t2, 8(a0) # fração do tempo em microssegundos
+    li t3, 1000
+    mul t1, t1, t3
+    div t2, t2, t3
+    add a0, t2, t1
 
-    addi sp, sp, 16
+
+    addi sp, sp, 32
 
     ret
 
@@ -130,6 +143,8 @@ sleep:
     addi sp, sp, -16
     sw ra, 12(sp)
     sw fp, 8(sp)
+
+    addi fp, sp, 16
 
     jal time
 
@@ -413,6 +428,6 @@ imageFilter:
     
 
 exit:
-    li a0, 0
+    #li a0, 0
     li a7, 93
     ecall
