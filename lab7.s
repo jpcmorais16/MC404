@@ -1,21 +1,34 @@
+string: .skip 0x10
+.globl _start
+_start:
+    li a0, 1234
+    la a1, string
+    li a2, 10
+    jal itoa
+    jal puts
+    jal exit
+
+
+.globl puts
 puts:
-    lb t1, 0(a0)
-    li t2, '\0'
+    mv t1, a0
+    li t2, 0
     li t3, 0 # iterador
-    
+
     loop_puts:
+        lb t4, 0(t1)
         addi t1, t1, 1
         addi t3, t3, 1
-        lb t4, 0(t1)
         bne t4, t2, loop_puts 
 
-    li t2, '\n'
-    sb t2, t1
+    addi t3, t3, -1
+
     
-    li a0, 1
-    mv a1, t1
+    mv a1, a0
+    li a0, 1   
     mv a2, t3
     li a7, 64
+    ecall
 
 
     addi sp, sp, -16
@@ -28,102 +41,211 @@ puts:
     sb t4, 4(sp)
     
     li a0, 1
-    mv a1, t4
+    addi a1, sp, 4
     li a2, 1
-
+    li a7, 64
+    ecall
 
     lw ra, 12(sp)
     lw fp, 8(sp)
     addi sp, sp, 16
 
+    li a0, 1
 
     ret
 
 
-
+.globl gets
 gets:
     mv t0, a0 # endereco da entrada em t0
 
-    li a0, 0
+    li t1, 10 # \n
 
-    li t1, '\n'
-    li t2, 26
+    addi a1, t0, -1
 
-    li a0, 0
-    li a1, t0
-    li a2, 1
-    li a7, 63
-    
+    mv t5, a1
     loop_gets:
-
-        mv t5, a1
-        ecall
-        #addi a1, a1, 1
 
         li a0, 0
         addi a1, t5, 1
         li a2, 1
         li a7, 63
 
-        lb t4, 0(a1)
+        mv t5, a1
+        
+        ecall
+        #addi a1, a1, 1
+        
+        lb t4, 0(a1)       
         bne t4, t1, loop_gets
-        bne t4, t2, loop_gets
 
-    li t1, '\0'
+    li t1, 0 # \0 no final
     sb t1, 0(a1)
 
     mv a0, t0
     
     ret
 
-
+.globl atoi
 atoi:
-    mv t0, a0
-    
-    li t1, '\0'
-    li t2, 0
-    li t5, 10
+    #a0 -> string para converter
 
-    loop_atoi:
+    addi t0, a0, -1
+    li t1, 45 # -
+    li t5, 48
+    li t6, 57
+    li t3, 1 #t3 eh o sinal
 
-        mul t2, t2, t5
-
-        lb t3, 0(a0)
-        addi t3, t3, -'0'
-        add t2, t2, t3 
-       
+    loop_atoi1: # procura numero ou '-': entre 48 e 57, ou 45
         addi t0, t0, 1
-
-        lb t4, 0(t0)
-        bne t4, t1, loop_atoi 
-
-    mv a0, t2
-    ret
-
-itoa:
-    #a0 -> numero
-    #a1 -> string 
-    #a2 -> base
-
-    mv t0, a0
-    li t1, 0 # iterador 
-
-    loop_itoa:
+        lb t2, 0(t0)
         
 
+        beq t2, t5, negativo
+        bge t2, t5, and_atoi
 
+        j loop_atoi1
 
+        and_atoi:
+            blt t2, t6, fim_loop_atoi1
+            j loop_atoi1
 
+        negativo:
+            li t3, -1
+            addi t0, t0, 1
 
+    fim_loop_atoi1:    
+
+    li a0, 0 # resultado
+    li t1, 0 # iterador
+    li t2, 10
+    #t0 tem o endereco
+   
+    loop_atoi2:
+        lb t4, 0(t0)
+        beq t4, zero, fim_loop_atoi2 # quebra se vier \0
+
+        addi t4, t4, -48
+        mul a0, a0, t2
+        add a0, a0, t4
+
+        addi t0, t0, 1
+        
+        j loop_atoi2
+
+    fim_loop_atoi2:
+
+    mul a0, a0, t3
+
+    ret
+
+.globl itoa
+itoa:
+    # a0 -> numero
+    # a1 -> string
+    # a2 -> base
+
+    li t1, 16
+    beq a2, t1, base16
+
+    mv t0, a1
+    bge a0, zero, positivo10
+
+    li t1, '-'
+    sb t1, 0(a1)
+    addi a1, a1, 1
+    li t1, -1
+    mul a0, a0, t1
+        
+    positivo10:
+
+    li t2, 10
+    li t1, 0
+    mv t3, a0
+    
+    loop_itoa10_1:
+        div t3, t3, t2
+        addi t1, t1, 1
+        bne t3, zero, loop_itoa10_1  
+    
+    add t3, t1, a1
+    sb zero, 0(t3)
+
+    li t2, 10
+    mv t3, a0       
+    addi t3, t3, -1
+
+    loop_itoa10_2:
+        rem t1, t3, t2
+        div t3, t3, t2
+        addi t1, t1, '0'
+        sb t1, 0(t3)
+        addi t3, t3, -1
+        blt zero, t3, loop_itoa10_2
+
+    mv a0, t0
+
+    j fim_itoa
+
+        
+    base16: 
+    bge a0, zero, positivo16
+    
+    li t0, -1
+    mul a0, a0, t0
+
+    positivo16:
+
+    li t0, 10
+    li t1, 0
+    mv a4, a0
+
+    loop_itoa16_1:
+        div a4, a4, t0
+        addi t1, t1, 1
+        bne a4, zero, loop_itoa16_1
+    
+    add t2, t1, a1
+    sb zero, 0(t2)
+    addi t2, t2, -1
+
+    mv a4, a0
+    li t0, 16
+    li t1, 10
+    li t3, 0
+
+    loop_itoa16_2:
+        rem t4, a4, t0
+        div a4, a4, t0
+        blt t4, t1, menorque10
+        
+        addi t4, t4, 7
+
+        menorque10:
+
+        addi t4, t4, '0'
+        sb t4, 0(t2)
+        addi t3, t3, 1
+        addi t2, t2, -1
+        blt zero, a4, loop_itoa16_2
+        addi t2, t2, 1
+
+    mv a0, t2
+
+    fim_itoa:
+        
+    ret 
+        
+.globl time
 time:
     addi sp, sp, -32
 
-    la a0, 20(sp)
-    la a1, 16(sp)
+    addi a0, sp, 20
+    addi a1, sp, 16
     li a7, 169
     ecall
 
-    la a0, 20(sp)
+    addi a0, sp, 20
     lw t1, 0(a0) # tempo em segundos
     lw t2, 8(a0) # fração do tempo em microssegundos
     li t3, 1000
@@ -136,6 +258,7 @@ time:
 
     ret
 
+.globl sleep
 sleep:
     #a0 eh o tempo em ms
     mv t1, a0
@@ -163,7 +286,7 @@ sleep:
 
     ret
 
-
+.globl approx_sqrt
 approx_sqrt:
     #a0 eh a entrada
     #a1 eh o numero de iteracoes
@@ -178,7 +301,7 @@ approx_sqrt:
     loop_sqrt:
 
         div t3, a0, t1 # y/k
-        addi t1, t1, t3 # k + y/k
+        add t1, t1, t3 # k + y/k
         div t1, t1, t2      
         
         addi t0, t0, 1
@@ -190,7 +313,7 @@ approx_sqrt:
 
     ret
 
-
+.globl imageFilter
 imageFilter:
     #a0 eh a imagem
     #a1 eh a largura
@@ -426,8 +549,9 @@ imageFilter:
         ret
 
     
-
+.globl exit
 exit:
     #li a0, 0
     li a7, 93
     ecall
+    
