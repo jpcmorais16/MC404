@@ -1,9 +1,11 @@
-.set baseGPT, 0xFFFF0100 
-.set baseSynth, 0xFFFF0300
+.set BASE, 0xFFFF0100
 
+.text
+.align 4
 
-main_isr:
-    csrrw sp, mscratch, sp 
+int_handler:
+  ###### Tratador de interrupções e syscalls ######
+  csrrw sp, mscratch, sp 
     addi sp, sp, -128 
 
     sw x0, 0(sp) 
@@ -38,19 +40,21 @@ main_isr:
     sw x29, 116(sp) 
     sw x30, 120(sp) 
     sw x31, 124(sp)
+  
+    li t0, 10
+    bne a7, t0, 1f
 
+        li t1, BASE
+        //li a1, 1
+        sb a1, 33(t1)
 
-    la t1, _system_time
-    lw t2, 0(t1)
-    addi t2, t2, 100
-    sw t2, 0(t1)
+        li t1, BASE
+        //li a1, -14
+        sb a2, 32(t1)
 
-    li t2, 100
-    li t4, baseGPT
-    sw t2, 8(t4)
+    1:
 
-
-    lw x0, 0(sp) 
+   lw x0, 0(sp) 
     lw x1, 4(sp)
     lw x2, 8(sp) 
     lw x3, 12(sp) 
@@ -86,65 +90,48 @@ main_isr:
 
 
     addi sp, sp, 128
-    csrrw sp, mscratch, sp     
+    csrrw sp, mscratch, sp 
+  
+  csrr t0, mepc  # carrega endereço de retorno (endereço 
+                 # da instrução que invocou a syscall)
+  addi t0, t0, 4 # soma 4 no endereço de retorno (para retornar após a ecall) 
+  csrw mepc, t0  # armazena endereço de retorno de volta no mepc
+  mret           # Recuperar o restante do contexto (pc <- mepc)
+  
 
-    mret
 
 .globl _start
 _start:
-    la t1, main_isr
-    csrw mtvec, t1
 
+  la t0, int_handler  # Carregar o endereço da rotina que tratará as interrupções
+  csrw mtvec, t0      # (e syscalls) em no registrador MTVEC para configurar
+                      # o vetor de interrupções.
     la sp, stack_base
-
-    la t0, _system_time
-    sw zero, 0(t0)
 
     la t0, isr_stack_base
     csrw mscratch, t0
 
-    csrr t3, mie
-    li t5, 0x800
-    or t3, t3, t5
-    csrw mie, t3
+    csrr t1, mstatus # Update the mstatus.MPP
+    li t2, ~0x1800 # field (bits 11 and 12)
+    and t1, t1, t2 # with value 00 (U-mode)
+    csrw mstatus, t1
+    la t0, user_main # Loads the user software
+    csrw mepc, t0 # entry point into mepc
 
-    csrr t6, mstatus
-    ori t6, t6, 0x8
-    csrw mstatus, t6
+    mret 
+# Escreva aqui o código para mudar para modo de usuário e chamar a função 
+# user_main (definida em outro arquivo). Lembre-se de inicializar a 
+# pilha do usuário para que seu programa possa utilizá-la.
 
-    li t2, 100
-    li t4, baseGPT
-    sw t2, 8(t4)
-
-    la sp, stack_base
-    jal ra, main
-
-
-
-.globl play_note
-play_note:
-    #a0: ch
-    #a1: instrumento
-    #a2: nota
-    #a3: velocidde
-    #a4: duracao
-    li t0, baseSynth
-
-    sb a0, 0(t0)
-    sh a1, 2(t0)
-    sb a2, 4(t0)
-    sb a3, 5(t0)
-    sh a4, 6(t0)
+.globl logica_controle
+logica_controle:
+    
+    li a0, 1
+    li a2, -14
+    li a7, 10
+    ecall
 
     ret
-
-.globl _system_time
-#_system_time: .skip 0x10
-# isr_stack_base: .skip 0x200
-# stack_base: .skip 0x100
-
-.data
-    _system_time: .word 0
 
 
 .bss
@@ -153,5 +140,3 @@ play_note:
     stack_base:
     isr_stack: .skip 1024
     isr_stack_base:
-      
-

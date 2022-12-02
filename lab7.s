@@ -140,68 +140,58 @@ atoi:
     ret
 
 .globl itoa
-#char * base10( int value, char * str):
-base10: 
-
+base10:       
         mv a7, a1
-        bge a0, zero, positivo10
-
+        bge a0, zero, 4f
+        
         li t1 , '-'
         sb t1, 0(a1)
         addi a1, a1, 1
         li t1, -1
-        mul a0, a0, t1
+        mul a0,a0,t1
             
-        positivo10:
-
+        4:
+        
         li t0, 10
-        li t1, 0 
+        li t1, 0
         mv a4, a0
-
-        loop_itoa10_1:
-            div a4, a4, t0
-            addi t1, t1, 1
-            bne a4, zero, loop_itoa10_1  
+           5:
+             div a4, a4, t0
+             addi t1, t1, 1
+             bne a4, zero, 5b  
         
         add t3, t1, a1
         sb zero, 0(t3)
 
         mv a4, a0
         li t0, 10
-        addi t3, t3, -1
-
-        loop_itoa10_2:
+        addi t3,t3,-1
+        6:
             rem t1,a4,t0
             div a4,a4,t0
             addi t1,t1,'0'
             sb t1, 0(t3)
             addi t3, t3, -1
-            blt zero, a4, loop_itoa10_2
-
+            blt zero, a4, 6b
         mv a0, a7
         ret
 
-#char * base16( int value, char * str):
 base16: 
-
-        blt a0, zero, negativo16
-        j positivo16
         
-        negativo16:
-        li t0, -1
-        mul a0, a0, t0
-
-        positivo16:
+        blt a0, zero, 1f
+        j 2f
+        1:
+            li t0, -1
+            mul a0, a0, t0
+        2:
 
         li t0, 10
-        li t1, 0 
+        li t1, 0
         mv a4, a0
-
-        loop_itoa16_1:
-        
-            div a4, a4, t0
-            addi t1, t1, 1
-            bne a4, zero, loop_itoa16_1  
+           5:
+             div a4, a4, t0
+             addi t1, t1, 1
+             bne a4, zero, 5b  
         
         add t3, t1, a1
         sb zero, 0(t3)
@@ -212,124 +202,42 @@ base16:
         li t1, 10
         li t4, 0
 
-        loop_itoa16_2:
-            rem t2, a4, t0
-            div a4, a4, t0
-            blt t2, t1, menorque10
-
-            addi t2, t2, 7
-
-            menorque10:
-            addi t2, t2, '0'
+        6:
+            rem t2,a4,t0
+            div a4,a4,t0
+            bge t2, t1, 7f
+            j 8f
+            7:
+              addi t2, t2, 7
+            8:
+            addi t2,t2,'0'
             sb t2, 0(t3)
             addi t4, t4, 1
             addi t3, t3, -1
-            blt zero, a4, loop_itoa16_2
+            blt zero, a4, 6b
             addi t3, t3, 1
-
         mv a0, t3
-
         ret
-
 
 .globl itoa
 itoa:
-   
     addi sp, sp, -16
     sw ra, 0(sp)
 
     li t1, 16
-    beq a2, t1, b16
+    beq a2, t1, 2f
 
-        mv a7, a1
-        bge a0, zero, positivo10
-
-        li t1 , '-'
-        sb t1, 0(a1)
-        addi a1, a1, 1
-        li t1, -1
-        mul a0, a0, t1
-            
-        positivo10:
-
-        li t0, 10
-        li t1, 0 
-        mv a4, a0
-
-        loop_itoa10_1:
-            div a4, a4, t0
-            addi t1, t1, 1
-            bne a4, zero, loop_itoa10_1  
+    1: 
+        jal ra , base10
+        j 3f
         
-        add t3, t1, a1
-        sb zero, 0(t3)
-
-        mv a4, a0
-        li t0, 10
-        addi t3, t3, -1
-
-        loop_itoa10_2:
-            rem t1,a4,t0
-            div a4,a4,t0
-            addi t1,t1,'0'
-            sb t1, 0(t3)
-            addi t3, t3, -1
-            blt zero, a4, loop_itoa10_2
-
-        mv a0, a7
-        j fim_itoa
-        
-    b16: 
-        blt a0, zero, negativo16
-        j positivo16
-        
-        negativo16:
-        li t0, -1
-        mul a0, a0, t0
-
-        positivo16:
-
-        li t0, 10
-        li t1, 0 
-        mv a4, a0
-
-        loop_itoa16_1:
-        
-            div a4, a4, t0
-            addi t1, t1, 1
-            bne a4, zero, loop_itoa16_1  
-        
-        add t3, t1, a1
-        sb zero, 0(t3)
-        addi t3,t3,-1
-
-        mv a4, a0
-        li t0, 16
-        li t1, 10
-        li t4, 0
-
-        loop_itoa16_2:
-            rem t2, a4, t0
-            div a4, a4, t0
-            blt t2, t1, menorque10
-
-            addi t2, t2, 7
-
-            menorque10:
-            addi t2, t2, '0'
-            sb t2, 0(t3)
-            addi t4, t4, 1
-            addi t3, t3, -1
-            blt zero, a4, loop_itoa16_2
-            addi t3, t3, 1
-
-        mv a0, t3
-
-
-    fim_itoa:
+    2: 
+        jal ra, base16
+        j 3f
+    3:
         lw ra,0(sp)
         addi sp, sp, 16
-    ret   
+    ret    
         
 .globl time
 time:
