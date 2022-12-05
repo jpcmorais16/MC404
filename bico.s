@@ -121,74 +121,66 @@ approx_sqrt:
 
 .globl puts
 puts:
-    mv t1, a0
-    li t3, 0 # iterador
+    mv s1, a0 # move pelo buffer
+	li s2, 0 # condicao de parada
 
-    loop_puts:
-        lb t4, 0(t1)
-        addi t1, t1, 1
-        addi t3, t3, 1
-        bne t4, zero, loop_puts 
+	loop_puts:
+		lb s3, 0(s1)
+		beq s3, s2, fim_loop_puts
 
-    addi t3, t3, -1
+		mv a1, s1
+		li a2, 1
+		li a7, 18
+		ecall
+		
+		addi s1, s1, 1
+		j loop_puts
 
-    
-    mv a1, a0
-    li a0, 1   
-    mv a2, t3
-    li a7, 18 #write
-    ecall
+	fim_loop_puts:
 
+	addi sp, sp, -16
 
-    addi sp, sp, -16
+	li s3, '\n'
+	sb s3, 12(sp)
 
+	addi a1, sp, 12
+	li a2, 1
+	li a7, 18
+	ecall
 
-    li t4, '\n'
-    sb t4, 12(sp)
-    
-    li a0, 1
-    addi a1, sp, 12
-    li a2, 1
-    li a7, 18 #write
-    ecall
+	addi sp, sp, 16
 
+	li a0, 1
 
-    addi sp, sp, 16
-
-    li a0, 1
-    fim_puts:
-
-    ret
+	ret
 
 .globl gets
 gets:
-    mv t0, a0 # endereco da entrada em t0
+    mv s1, a0 # move pelo buffer
+	li s2, 0 # iterador
+	li s3, '\n' # parada 1
+	li s4, 26 # parada 2
 
-    li t1, '\n'
+	loop_gets:
+		lb s5, 0(s1)
+		beq s5, s3, fim_loop_gets
+		beq s5, s4, fim_loop_gets
 
-    addi t5, t0, -1
+		mv a1, s1
+		li a2, 1
+		li a7, 17
+		ecall
 
-    loop_gets:
+		addi s1, s1, 1
+		addi s2, s2, 1
+		j loop_gets
+		
+	fim_loop_gets:
+	
+	sb zero, 0(s1)
 
-        li a0, 0
-        addi a1, t5, 1
-        li a2, 1
-        li a7, 17 #read
-
-        mv t5, a1
-        
-        ecall
-        
-        lbu t4, 0(a1)       
-        fim_loop_gets:
-        bne t4, t1, loop_gets
-
-    li t1, 0 # \0 no final
-    sb t1, 0(a1)
-
-    mv a0, t0
-    rotulo:
-    ret
+	mv a0, s2
+	ret
 
 .globl atoi
 atoi:

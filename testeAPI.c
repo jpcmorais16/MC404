@@ -11,11 +11,12 @@ void filter_1d_image(char * img, char * filter);
 
 int main(){
     char buffer[3];
-    // buffer[0] = '1';
-    // buffer[1] = '2';
-    // buffer[2] = '3';
-    gets(buffer);
-    puts(buffer);
+    buffer[0] = '1';
+    buffer[1] = '2';
+    buffer[2] = '3';
+    //gets(buffer);
+    //puts(buffer);
+    int FIUSDABNFYUDAS = atoi(buffer); 
     while(1);
     return 0; 
 }

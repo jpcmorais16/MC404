@@ -141,14 +141,14 @@ read:
                 lb t0, 0x2(t1)
                 bne t0, zero, loop_dentro_read
 
-                lb t0, 0x3(t1)
-                sb t0, 0(a1) 
+            lb t0, 0x3(t1)
+            sb t0, 0(a1) 
 
-                addi a1, a1, 1
-                addi t2, t2, 1
-                
-                beq t2, a2, fim_loop_read
-                j loop_fora_read
+            addi a1, a1, 1
+            addi t2, t2, 1
+            
+            beq t2, a2, fim_loop_read
+            j loop_fora_read
 
         fim_loop_read:
             mv a0, t2
