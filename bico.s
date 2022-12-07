@@ -2,9 +2,19 @@
 set_motor:
   #a0 vertical
   #a1 horizontal
+  addi sp, sp, -16
+
+  sw a0, 12(sp)
+  sw a1, 8(sp)
+  sw a2, 4(sp)
 
   li a7, 10
   ecall
+
+  lw a0, 12(sp)
+  lw a1, 8(sp)
+  lw a2, 4(sp)
+  addi sp, sp, 16
   ret
 
 .globl set_handbreak
@@ -56,39 +66,99 @@ display_img:
   ecall
   ret
 
+.section .data
+test_str:
+	.asciz "OPA"
+
+.section .text
+.align 2
+
 .globl filter_1d_image
 filter_1d_image:
-  #a0 -> img
-  #a1 -> filter (vetor de 3 posic)
+	#a0 -> img
+	#a1 -> filter (vetor de 3 posic)
+	addi sp, sp, -16
 
-  mv t0, a0 # percorre a imagem
-  li t1, 254 # tamanho imagem
+	sw ra, 4(sp)
+	sw s1, 0(sp)
 
-  sb zero, 0(t0)
-  addi t0, t0, 1
+	addi sp, sp, -256
 
-  loop_filter:
-    lbu t6, 0(t0) # resultado final
-    lbu t2, 1(a1)
-    mul t6, t6, t2  
+	mv t0, a0 # percorre a imagem
+	li t1, 256 # tamanho imagem
 
-    lbu t3, -1(t0)
-    lbu t2, 0(a1)
-    add t6, t6, t2
+	mv t2, sp
+	li t3, 0 #iterador
+	loop_salva_pilha:
+		lbu t4, 0(t0)
+		sb t4, 0(t2) # salva cada byte do vetor original na pilha
 
-    lbu t3, 1(t0)
-    lbu t2, 2(a1)
-    add t6, t6, t2
-    
-    sb t6, 0(t0)
+		addi t2, t2, 1
+		addi t0, t0, 1
+		addi t3, t3, 1
 
-    add t0, t0, 1
-    add t1, t1, -1
-    bne t1, zero, loop_filter
+		bne t3, t1, loop_salva_pilha
+	
 
-    sb zero, 0(t0)
 
-    ret
+
+	mv t0, a0 # percorre a imagem original
+	mv t1, sp # percorre a pilha
+	li t2, 0 #iterador
+	li t4, 254 #condicao de parada
+	li s1, 255
+
+	sb zero, 0(t0) # borda
+	sb zero, 255(t0) # borda
+
+	addi t0, t0, 1
+
+	loop_filter:
+
+		li t6, 0 # resultado final
+		lbu t5, 0(t1) # valor original da imagem
+		lb t3, 1(a1) # valor do filtro
+		mul t6, t5, t3
+
+		lbu t5, -1(t1) # valor original da imagem à esquerda
+		lb t3, 0(a1) # valor do filtro à esquerda
+		mul t5, t5, t3
+		add t6, t6, t5 # soma no resultado final
+
+		lbu t5, 1(t1) # valor original da imagem à direita
+		lb t3, 2(a1) # valor do filtro à direita
+		mul t5, t5, t3
+		add t6, t6, t5
+
+		blt t6, zero, menor_0
+		bge t6, s1, maior_255
+
+		j normal
+
+
+		menor_0:
+			li t6, 0
+			j normal
+
+		maior_255:
+			li t6, 255
+			j normal
+
+		normal:
+			sb t6, 0(t0) # salva o byte no endereco do registrador que percorre
+
+		addi t0, t0, 1
+		addi t2, t2, 1
+		addi t1, t1, 1
+
+		bne t2, t4, loop_filter
+
+	addi sp, sp, 256
+	lw s1, 0(sp)
+	lw ra, 4(sp)
+	addi sp, sp, 16
+
+	ret
   
 
 
@@ -114,34 +184,33 @@ approx_sqrt:
         bge a1, t0, loop_sqrt
 
     1:
-
     mv a0, t1
 
     ret
 
 .globl puts
 puts:
-    mv s1, a0 # move pelo buffer
-	li s2, 0 # condicao de parada
+    mv t1, a0 # move pelo buffer
+	li t2, 0 # condicao de parada
 
 	loop_puts:
-		lb s3, 0(s1)
-		beq s3, s2, fim_loop_puts
+		lbu t3, 0(t1)
+		beq t3, t2, fim_loop_puts
 
-		mv a1, s1
+		mv a1, t1
 		li a2, 1
 		li a7, 18
 		ecall
 		
-		addi s1, s1, 1
+		addi t1, t1, 1
 		j loop_puts
 
 	fim_loop_puts:
 
 	addi sp, sp, -16
 
-	li s3, '\n'
-	sb s3, 12(sp)
+	li t3, '\n'
+	sb t3, 12(sp)
 
 	addi a1, sp, 12
 	li a2, 1
@@ -156,84 +225,143 @@ puts:
 
 .globl gets
 gets:
-    mv s1, a0 # move pelo buffer
-	li s2, 0 # iterador
-	li s3, '\n' # parada 1
-	li s4, 26 # parada 2
 
-	loop_gets:
-		lb s5, 0(s1)
-		beq s5, s3, fim_loop_gets
-		beq s5, s4, fim_loop_gets
+    mv t3, a0       
+    mv a1, a0 
+    addi sp, sp, -16
+    
+    loop_gets:
 
-		mv a1, s1
-		li a2, 1
-		li a7, 17
-		ecall
+		sw a1, 0(sp)
 
-		addi s1, s1, 1
-		addi s2, s2, 1
-		j loop_gets
+        li a0, 0
+        li a2, 1 
+        li a7, 17    
+
+        ecall
 		
-	fim_loop_gets:
-	
-	sb zero, 0(s1)
+        lw a1, 0(sp)
+        
+        lbu t2, 0(a1)
 
-	mv a0, s2
-	ret
+        li t5, '\n'
+        li t6, 0 
+
+        beq t2, t5, fim_loop_gets
+        beq t2, t6, fim_loop_gets
+        addi a1, a1, 1
+        j loop_gets
+
+    fim_loop_gets:
+
+	sb t6, 0(a1)
+
+    addi sp, sp, 16
+
+    mv a0, t3
+    
+
+  ret
 
 .globl atoi
 atoi:
     #a0 -> string para converter
 
-    addi t0, a0, -1
-    li t1, 45 # -
-    li t5, 48
-    li t6, 57
-    li t3, 1 #t3 eh o sinal
+	# primeiro byte:
+	lb t0, 0(a0)
+	li t1, 45 # -
+	li t2, 48 # 0
+	li t3, 57 # 9
+	li t4, 1 # flag de negativo
+	li t6, 0 # resultado
 
-    loop_atoi1: # procura numero ou '-': entre 48 e 57, ou 45
-        addi t0, t0, 1
-        lb t2, 0(t0)
+	beq t0, t1, negativo #testar se eh negativo
+	j positivo
+
+	negativo:
+		li t4, 0
+
+	positivo:
+	
+	addi t0, t0, 1
+	li t1, 10
+
+	loop_atoi:
+
+		lb t5, 0(t0)
+		bge	t5, t2, fim_loop_atoi # ascii menor que 0
+		blt t5, t3, fim_loop_atoi # ascii maior que 9
+
+		mul t6, t6, t1 # multiplica por 10
+
+		addi t5, t5, -48
+		add t6, t6, t5 # soma no resultado
+
+		j loop_atoi
+		
+	fim_loop_atoi:
+
+	beq t4, zero, valor_negativo
+	j fim_atoi
+
+	valor_negativo:
+		li t4, -1
+		mul t6, t6, t4
+
+	fim_atoi:
+
+	mv a0, t6
+	ret
+
+
+    # addi t0, a0, -1
+    # li t1, 45 # -
+    # li t5, 48
+    # li t6, 57
+    # li t3, 1 #t3 eh o sinal
+
+    # loop_atoi1: # procura numero ou '-': entre 48 e 57, ou 45
+    #     addi t0, t0, 1
+    #     lb t2, 0(t0)
         
 
-        beq t2, t5, negativo
-        bge t2, t5, and_atoi
+    #     beq t2, t1, negativo
+    #     bge t2, t5, and_atoi
 
-        j loop_atoi1
+    #     j loop_atoi1
 
-        and_atoi:
-            blt t2, t6, fim_loop_atoi1
-            j loop_atoi1
+    #     and_atoi:
+    #         blt t2, t6, fim_loop_atoi1
+    #         j loop_atoi1
 
-        negativo:
-            li t3, -1
-            addi t0, t0, 1
+    #     negativo:
+    #         li t3, -1
+    #         addi t0, t0, 1
 
-    fim_loop_atoi1:    
+    # fim_loop_atoi1:    
 
-    li a0, 0 # resultado
-    li t1, 0 # iterador
-    li t2, 10
-    #t0 tem o endereco
+    # li a0, 0 # resultado
+    # li t1, 0 # iterador
+    # li t2, 10
+    # #t0 tem o endereco
    
-    loop_atoi2:
-        lb t4, 0(t0)
-        beq t4, zero, fim_loop_atoi2 # quebra se vier \0
+    # loop_atoi2:
+    #     lb t4, 0(t0)
+    #     beq t4, zero, fim_loop_atoi2 # quebra se vier \0
 
-        addi t4, t4, -48
-        mul a0, a0, t2
-        add a0, a0, t4
+    #     addi t4, t4, -48
+    #     mul a0, a0, t2
+    #     add a0, a0, t4
 
-        addi t0, t0, 1
+    #     addi t0, t0, 1
         
-        j loop_atoi2
+    #     j loop_atoi2
 
-    fim_loop_atoi2:
+    # fim_loop_atoi2:
 
-    mul a0, a0, t3
+    # mul a0, a0, t3
 
-    ret
+    # ret
 
 .globl sleep
 sleep:
@@ -267,7 +395,7 @@ sleep:
 
     ret
 
-base10: 
+decimal: 
 
       mv a7, a1
       bge a0, zero, 4f
@@ -303,7 +431,7 @@ base10:
       ret
 
 
-base16: 
+hexa: 
       blt a0, zero, 1f
       j 2f
       1:
@@ -332,9 +460,11 @@ base16:
           div a4, a4, t0
           bge t2, t1, 7f
           j 8f
+
           7:
             addi t2, t2, 7  
           8:
+
           addi t2, t2, '0'
           sb t2, 0(t3)
           addi t4, t4, 1
@@ -355,11 +485,11 @@ itoa:
   beq a2, t1, 2f
 
   1: 
-      jal ra , base10
+      jal ra , decimal
       j 3f
       
   2: 
-      jal ra, base16
+      jal ra, hexa
       j 3f
   3:
       lw ra, 0(sp)

@@ -3,6 +3,9 @@
 .set serial, 0xFFFF0500
 .set canvas, 0xFFFF0700
 
+.text
+.align 4
+
 motor: # MOTOR
     li t1, carro
 
@@ -129,6 +132,7 @@ rotation: # ROTATION
 
 read:
         li a0, 0
+        mv t5, a1
         li t2, 0
 
         loop_fora_read:
@@ -142,9 +146,9 @@ read:
                 bne t0, zero, loop_dentro_read
 
             lb t0, 0x3(t1)
-            sb t0, 0(a1) 
+            sb t0, 0(t5) 
 
-            addi a1, a1, 1
+            addi t5, t5, 1
             addi t2, t2, 1
             
             beq t2, a2, fim_loop_read
@@ -277,6 +281,11 @@ int_handler:
 
     fim:
 
+      csrr t0, mepc  # carrega endereço de retorno (endereço 
+                 # da instrução que invocou a syscall)
+  addi t0, t0, 4 # soma 4 no endereço de retorno (para retornar após a ecall) 
+  csrw mepc, t0  # armazena endereço de retorno de volta no mepc
+
     lw x0, 0(sp) 
     lw x1, 4(sp)
     lw x2, 8(sp) 
@@ -313,10 +322,7 @@ int_handler:
     addi sp, sp, 128
     csrrw sp, mscratch, sp 
   
-  csrr t0, mepc  # carrega endereço de retorno (endereço 
-                 # da instrução que invocou a syscall)
-  addi t0, t0, 4 # soma 4 no endereço de retorno (para retornar após a ecall) 
-  csrw mepc, t0  # armazena endereço de retorno de volta no mepc
+
   mret           # Recuperar o restante do contexto (pc <- mepc)
 
 .globl _start
